@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicPath = path.join(__dirname, "public");
 const dirOf = (specifier) => path.dirname(require.resolve(specifier));
 
-const controllerPath = dirOf("@mercuryworkshop/scramjet-controller/dist/controller.api.js");
+const controllerPath = path.dirname(require.resolve("@mercuryworkshop/scramjet-controller"));
 const utilsPath = dirOf("@mercuryworkshop/scramjet-utils");
 const libcurlPath = dirOf("@mercuryworkshop/libcurl-transport");
 
