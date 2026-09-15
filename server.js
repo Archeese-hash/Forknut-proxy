@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+mport Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import http from "node:http";
 import path from "node:path";
@@ -16,17 +16,14 @@ const publicPath = path.join(__dirname, "public");
 const dirOf = (specifier) =>
   path.dirname(require.resolve(specifier));
 
-const controllerPath = dirOf(
-  "@mercuryworkshop/scramjet-controller"
-);
+const controllerPath =
+  dirOf("@mercuryworkshop/scramjet-controller");
 
-const utilsPath = dirOf(
-  "@mercuryworkshop/scramjet-utils"
-);
+const utilsPath =
+  dirOf("@mercuryworkshop/scramjet-utils");
 
-const epoxyPath = dirOf(
-  "@mercuryworkshop/epoxy-transport"
-);
+const epoxyPath =
+  dirOf("@mercuryworkshop/epoxy-transport");
 
 const app = Fastify({
   logger: true,
@@ -56,6 +53,9 @@ const app = Fastify({
   }
 });
 
+/*
+ * Cross-origin isolation required by Scramjet.
+ */
 app.addHook("onSend", async (_request, reply) => {
   reply.header(
     "Cross-Origin-Opener-Policy",
@@ -65,11 +65,6 @@ app.addHook("onSend", async (_request, reply) => {
   reply.header(
     "Cross-Origin-Embedder-Policy",
     "require-corp"
-  );
-
-  reply.header(
-    "Cross-Origin-Resource-Policy",
-    "cross-origin"
   );
 });
 
@@ -83,7 +78,7 @@ await app.register(fastifyStatic, {
 });
 
 /*
- * Scramjet controller
+ * Controller
  */
 await app.register(fastifyStatic, {
   root: controllerPath,
@@ -92,7 +87,7 @@ await app.register(fastifyStatic, {
 });
 
 /*
- * Scramjet utilities
+ * Utilities
  */
 await app.register(fastifyStatic, {
   root: utilsPath,
@@ -110,7 +105,7 @@ await app.register(fastifyStatic, {
 });
 
 /*
- * Forknut website
+ * Forknut frontend
  */
 await app.register(fastifyStatic, {
   root: publicPath,
@@ -127,9 +122,6 @@ app.get("/health", async () => {
   };
 });
 
-/*
- * Start server
- */
 const port = Number(
   process.env.PORT || 3000
 );
