@@ -1,0 +1,106 @@
+let controller = null;
+let frame = null;
+
+const form = document.getElementById("proxyForm");
+const input = document.getElementById("url");
+const shell = document.getElementById("shell");
+const browser = document.getElementById("browser");
+const status = document.getElementById("status");
+const homeButton = document.getElementById("homeButton");
+
+function normalizeUrl(value) {
+  let url = value.trim();
+  if (!url) throw new Error("Enter a website address.");
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  const parsed = new URL(url);
+  if (!/^https?:$/.test(parsed.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
+  return parsed.href;
+}
+
+function setStatus(text) {
+  status.textContent = text;
+}
+
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    throw new Error("This browser does not support service workers.");
+  }
+
+  const registration = await navigator.serviceWorker.register("/sw.js", {
+    scope: "/",
+    updateViaCache: "none"
+  });
+
+  if (navigator.serviceWorker.controller) return navigator.serviceWorker.controller;
+
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("The service worker did not take control. Reload the page and try again.")), 15000);
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      clearTimeout(timeout);
+      resolve();
+    }, { once: true });
+  });
+
+  return registration.active || navigator.serviceWorker.controller;
+}
+
+async function getController() {
+  if (controller) return controller;
+
+  const serviceWorker = await registerServiceWorker();
+  const wispUrl = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/wisp/`;
+  const { default: LibcurlClient } = await import("/libcurl/index.mjs");
+  const transport = new LibcurlClient({ wisp: wispUrl });
+  await transport.init();
+
+  controller = new $scramjetController.Controller({
+    serviceworker: serviceWorker,
+    transport,
+    config: {
+      prefix: "/~/sj/",
+      scramjetPath: "/scramjet/scramjet.js",
+      wasmPath: "/scramjet/scramjet.wasm",
+      injectPath: "/controller/controller.inject.js"
+    }
+  });
+
+  await controller.wait();
+  return controller;
+}
+
+async function browse(url) {
+  setStatus("Starting proxyâ¦");
+  const sj = await getController();
+
+  if (!frame) {
+    frame = sj.createFrame();
+    frame.element.className = "proxy-frame";
+    browser.appendChild(frame.element);
+  }
+
+  shell.classList.add("hidden");
+  browser.classList.add("active");
+  homeButton.classList.add("visible");
+  frame.go(url);
+  setStatus(url);
+}
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    const url = normalizeUrl(input.value);
+    await browse(url);
+  } catch (error) {
+    setStatus(error?.message || "Something went wrong.");
+  }
+});
+
+homeButton.addEventListener("click", () => {
+  browser.classList.remove("active");
+  shell.classList.remove("hidden");
+  homeButton.classList.remove("visible");
+  setStatus("Ready");
+  input.focus();
+});
+
+setStatus("Ready");
