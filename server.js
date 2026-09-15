@@ -83,3 +83,20 @@ await app.listen({
   host: "0.0.0.0",
   port
 });
+
+const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const publicPath = path.join(__dirname, "public");
+
+const dirOf = (specifier) => path.dirname(require.resolve(specifier));
+
+const controllerPath = dirOf("@mercuryworkshop/scramjet-controller");
+const utilsPath = dirOf("@mercuryworkshop/scramjet-utils");
+const libcurlPath = dirOf("@mercuryworkshop/libcurl-transport");
+const epoxyPath = dirOf("@mercuryworkshop/epoxy-transport");
+
+await app.register(fastifyStatic, {
+  root: epoxyPath,
+  prefix: "/epoxy/",
+  decorateReply: false
+});
