@@ -2,12 +2,14 @@ importScripts(
   "/controller/controller.sw.js"
 );
 
+
 self.addEventListener(
   "install",
   () => {
     self.skipWaiting();
   }
 );
+
 
 self.addEventListener(
   "activate",
@@ -18,9 +20,11 @@ self.addEventListener(
   }
 );
 
+
 self.addEventListener(
   "fetch",
   (event) => {
+
     if (
       $scramjetController.shouldRoute(
         event
@@ -32,5 +36,6 @@ self.addEventListener(
         )
       );
     }
+
   }
 );
