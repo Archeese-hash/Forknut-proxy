@@ -1,4 +1,4 @@
-mport Fastify from "fastify";
+import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import http from "node:http";
 import path from "node:path";
@@ -13,17 +13,21 @@ const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicPath = path.join(__dirname, "public");
 
-const dirOf = (specifier) =>
-  path.dirname(require.resolve(specifier));
+const dirOf = (specifier) => {
+  return path.dirname(require.resolve(specifier));
+};
 
-const controllerPath =
-  dirOf("@mercuryworkshop/scramjet-controller");
+const controllerPath = dirOf(
+  "@mercuryworkshop/scramjet-controller"
+);
 
-const utilsPath =
-  dirOf("@mercuryworkshop/scramjet-utils");
+const utilsPath = dirOf(
+  "@mercuryworkshop/scramjet-utils"
+);
 
-const epoxyPath =
-  dirOf("@mercuryworkshop/epoxy-transport");
+const epoxyPath = dirOf(
+  "@mercuryworkshop/epoxy-transport"
+);
 
 const app = Fastify({
   logger: true,
@@ -53,9 +57,6 @@ const app = Fastify({
   }
 });
 
-/*
- * Cross-origin isolation required by Scramjet.
- */
 app.addHook("onSend", async (_request, reply) => {
   reply.header(
     "Cross-Origin-Opener-Policy",
@@ -68,53 +69,35 @@ app.addHook("onSend", async (_request, reply) => {
   );
 });
 
-/*
- * Scramjet
- */
 await app.register(fastifyStatic, {
   root: scramjetPath,
   prefix: "/scramjet/",
   decorateReply: false
 });
 
-/*
- * Controller
- */
 await app.register(fastifyStatic, {
   root: controllerPath,
   prefix: "/controller/",
   decorateReply: false
 });
 
-/*
- * Utilities
- */
 await app.register(fastifyStatic, {
   root: utilsPath,
   prefix: "/utils/",
   decorateReply: false
 });
 
-/*
- * Epoxy transport
- */
 await app.register(fastifyStatic, {
   root: epoxyPath,
   prefix: "/epoxy/",
   decorateReply: false
 });
 
-/*
- * Forknut frontend
- */
 await app.register(fastifyStatic, {
   root: publicPath,
   decorateReply: false
 });
 
-/*
- * Health check
- */
 app.get("/health", async () => {
   return {
     ok: true,
@@ -122,9 +105,7 @@ app.get("/health", async () => {
   };
 });
 
-const port = Number(
-  process.env.PORT || 3000
-);
+const port = Number(process.env.PORT || 3000);
 
 await app.listen({
   host: "0.0.0.0",
