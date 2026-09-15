@@ -19,33 +19,32 @@ const publicPath = path.join(
   "public"
 );
 
-function packagePath(packageName) {
+function dirOf(packageName) {
   return path.dirname(
     require.resolve(packageName)
   );
 }
 
-const controllerPath =
-  packagePath(
-    "@mercuryworkshop/scramjet-controller"
-  );
+const controllerPath = dirOf(
+  "@mercuryworkshop/scramjet-controller"
+);
 
-const utilsPath =
-  packagePath(
-    "@mercuryworkshop/scramjet-utils"
-  );
+const utilsPath = dirOf(
+  "@mercuryworkshop/scramjet-utils"
+);
 
-const libcurlPath =
-  packagePath(
-    "@mercuryworkshop/libcurl-transport"
-  );
+const libcurlPath = dirOf(
+  "@mercuryworkshop/libcurl-transport"
+);
+
 
 const app = Fastify({
   logger: true,
 
   serverFactory: (handler) => {
-    const server =
-      http.createServer(handler);
+    const server = http.createServer(
+      handler
+    );
 
     server.on(
       "upgrade",
@@ -57,9 +56,7 @@ const app = Fastify({
               "http://localhost"
             ).pathname;
 
-          if (
-            pathname === "/wisp/"
-          ) {
+          if (pathname === "/wisp/") {
             req.url = "/wisp/";
 
             wisp.routeRequest(
@@ -67,9 +64,11 @@ const app = Fastify({
               socket,
               head
             );
-          } else {
-            socket.end();
+
+            return;
           }
+
+          socket.end();
         } catch (error) {
           console.error(
             "Wisp error:",
@@ -87,12 +86,12 @@ const app = Fastify({
 
 
 /*
- * Cross-origin isolation
+ * Scramjet requires these headers
+ * for cross-origin isolation.
  */
 app.addHook(
   "onSend",
   async (_request, reply) => {
-
     reply.header(
       "Cross-Origin-Opener-Policy",
       "same-origin"
@@ -102,13 +101,12 @@ app.addHook(
       "Cross-Origin-Embedder-Policy",
       "require-corp"
     );
-
   }
 );
 
 
 /*
- * Scramjet
+ * Scramjet engine
  */
 await app.register(
   fastifyStatic,
@@ -121,7 +119,7 @@ await app.register(
 
 
 /*
- * Controller
+ * Scramjet controller
  */
 await app.register(
   fastifyStatic,
@@ -134,7 +132,7 @@ await app.register(
 
 
 /*
- * Utils
+ * Scramjet utilities
  */
 await app.register(
   fastifyStatic,
@@ -147,13 +145,10 @@ await app.register(
 
 
 /*
- * LIBCURL
+ * Libcurl transport
  *
- * This serves:
- *
- * /libcurl/index.mjs
- * /libcurl/index.js
- * and the libcurl WASM files.
+ * This is the important transport
+ * used by Forknut.
  */
 await app.register(
   fastifyStatic,
@@ -186,25 +181,23 @@ app.get(
     return {
       ok: true,
       service: "Forknut Proxy",
-      transport: "libcurl",
-      scramjet: "2.0.67-alpha.2"
+      scramjet: "2.0.67-alpha.2",
+      transport: "libcurl"
     };
   }
 );
 
 
-/*
- * Start server
- */
-const port =
-  Number(
-    process.env.PORT || 3000
-  );
+const port = Number(
+  process.env.PORT || 3000
+);
+
 
 await app.listen({
   host: "0.0.0.0",
   port
 });
+
 
 console.log(
   `Forknut Proxy running on port ${port}`
