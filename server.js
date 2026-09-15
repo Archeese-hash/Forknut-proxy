@@ -17,17 +17,14 @@ const dirOf = (specifier) => {
   return path.dirname(require.resolve(specifier));
 };
 
-const controllerPath = dirOf(
-  "@mercuryworkshop/scramjet-controller"
-);
+const controllerPath =
+  dirOf("@mercuryworkshop/scramjet-controller");
 
-const utilsPath = dirOf(
-  "@mercuryworkshop/scramjet-utils"
-);
+const utilsPath =
+  dirOf("@mercuryworkshop/scramjet-utils");
 
-const epoxyPath = dirOf(
-  "@mercuryworkshop/epoxy-transport"
-);
+const epoxyPath =
+  dirOf("@mercuryworkshop/epoxy-transport");
 
 const app = Fastify({
   logger: true,
@@ -57,7 +54,21 @@ const app = Fastify({
   }
 });
 
+
+/*
+ * BROWSER SECURITY HEADERS
+ *
+ * COOP is needed by Scramjet.
+ *
+ * COEP is intentionally set to require-corp here because
+ * Scramjet's cross-origin-isolated mode depends on it.
+ *
+ * We also explicitly allow resources served by Forknut
+ * to be embedded by the proxied page.
+ */
+
 app.addHook("onSend", async (_request, reply) => {
+
   reply.header(
     "Cross-Origin-Opener-Policy",
     "same-origin"
@@ -67,7 +78,37 @@ app.addHook("onSend", async (_request, reply) => {
     "Cross-Origin-Embedder-Policy",
     "require-corp"
   );
+
+  reply.header(
+    "Cross-Origin-Resource-Policy",
+    "cross-origin"
+  );
+
+  /*
+   * These headers prevent the proxy itself from accidentally
+   * blocking normal images, fonts, CSS and media.
+   */
+
+  reply.header(
+    "Access-Control-Allow-Origin",
+    "*"
+  );
+
+  reply.header(
+    "Access-Control-Allow-Methods",
+    "GET,HEAD,OPTIONS"
+  );
+
+  reply.header(
+    "Access-Control-Allow-Headers",
+    "*"
+  );
 });
+
+
+/*
+ * SCRAMJET
+ */
 
 await app.register(fastifyStatic, {
   root: scramjetPath,
@@ -75,11 +116,21 @@ await app.register(fastifyStatic, {
   decorateReply: false
 });
 
+
+/*
+ * SCRAMJET CONTROLLER
+ */
+
 await app.register(fastifyStatic, {
   root: controllerPath,
   prefix: "/controller/",
   decorateReply: false
 });
+
+
+/*
+ * SCRAMJET UTILS
+ */
 
 await app.register(fastifyStatic, {
   root: utilsPath,
@@ -87,25 +138,48 @@ await app.register(fastifyStatic, {
   decorateReply: false
 });
 
+
+/*
+ * EPOXY TRANSPORT
+ */
+
 await app.register(fastifyStatic, {
   root: epoxyPath,
   prefix: "/epoxy/",
   decorateReply: false
 });
 
+
+/*
+ * FORKNUT WEBSITE
+ */
+
 await app.register(fastifyStatic, {
   root: publicPath,
   decorateReply: false
 });
 
+
+/*
+ * HEALTH CHECK
+ */
+
 app.get("/health", async () => {
   return {
     ok: true,
-    service: "Forknut Proxy"
+    service: "Forknut Proxy",
+    images: "enabled"
   };
 });
 
-const port = Number(process.env.PORT || 3000);
+
+/*
+ * START SERVER
+ */
+
+const port = Number(
+  process.env.PORT || 3000
+);
 
 await app.listen({
   host: "0.0.0.0",
