@@ -1,35 +1,36 @@
 let controller = null;
 let frame = null;
 
-const form = document.getElementById("proxyForm");
-const input = document.getElementById("url");
-const shell = document.getElementById("shell");
-const browser = document.getElementById("browser");
-const status = document.getElementById("status");
-const homeButton = document.getElementById("homeButton");
 
+const form =
+  document.getElementById(
+    "proxyForm"
+  );
 
-function normalizeUrl(value) {
-  let url = value.trim();
+const input =
+  document.getElementById(
+    "url"
+  );
 
-  if (!url) {
-    throw new Error("Enter a website address.");
-  }
+const shell =
+  document.getElementById(
+    "shell"
+  );
 
-  if (!/^https?:\/\//i.test(url)) {
-    url = "https://" + url;
-  }
+const browser =
+  document.getElementById(
+    "browser"
+  );
 
-  const parsed = new URL(url);
+const status =
+  document.getElementById(
+    "status"
+  );
 
-  if (!/^https?:$/.test(parsed.protocol)) {
-    throw new Error(
-      "Only HTTP and HTTPS URLs are supported."
-    );
-  }
-
-  return parsed.href;
-}
+const homeButton =
+  document.getElementById(
+    "homeButton"
+  );
 
 
 function setStatus(text) {
@@ -39,12 +40,54 @@ function setStatus(text) {
 }
 
 
+function normalizeUrl(value) {
+
+  let url =
+    value.trim();
+
+  if (!url) {
+    throw new Error(
+      "Enter a website address."
+    );
+  }
+
+  if (
+    !/^https?:\/\//i.test(url)
+  ) {
+    url =
+      "https://" + url;
+  }
+
+  const parsed =
+    new URL(url);
+
+  if (
+    !/^https?:$/.test(
+      parsed.protocol
+    )
+  ) {
+    throw new Error(
+      "Only HTTP and HTTPS URLs are supported."
+    );
+  }
+
+  return parsed.href;
+}
+
+
+/*
+ * Register Forknut's service worker.
+ */
 async function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) {
+
+  if (
+    !("serviceWorker" in navigator)
+  ) {
     throw new Error(
       "This browser does not support service workers."
     );
   }
+
 
   const registration =
     await navigator.serviceWorker.register(
@@ -55,37 +98,56 @@ async function registerServiceWorker() {
       }
     );
 
+
   /*
-   * If the service worker is already controlling
-   * the page, use it immediately.
+   * Already controlling the page.
    */
-  if (navigator.serviceWorker.controller) {
+  if (
+    navigator.serviceWorker.controller
+  ) {
     return navigator.serviceWorker.controller;
   }
 
-  /*
-   * Wait for the service worker to take control.
-   */
-  await new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => {
-      reject(
-        new Error(
-          "Forknut service worker did not take control. Please reload Forknut and try again."
-        )
-      );
-    }, 15000);
 
-    navigator.serviceWorker.addEventListener(
-      "controllerchange",
-      () => {
-        clearTimeout(timeout);
-        resolve();
-      },
-      {
-        once: true
-      }
-    );
-  });
+  /*
+   * Wait for the new service worker
+   * to take control.
+   */
+  await new Promise(
+    (resolve, reject) => {
+
+      const timeout =
+        setTimeout(
+          () => {
+            reject(
+              new Error(
+                "Forknut's service worker did not take control. Reload Forknut and try again."
+              )
+            );
+          },
+          15000
+        );
+
+
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        () => {
+
+          clearTimeout(
+            timeout
+          );
+
+          resolve();
+
+        },
+        {
+          once: true
+        }
+      );
+
+    }
+  );
+
 
   return (
     navigator.serviceWorker.controller ||
@@ -94,18 +156,27 @@ async function registerServiceWorker() {
 }
 
 
+/*
+ * Create Scramjet controller.
+ */
 async function getController() {
+
   if (controller) {
     return controller;
   }
 
-  setStatus("Starting proxy...");
+
+  setStatus(
+    "Starting Forknut..."
+  );
+
 
   const serviceWorker =
     await registerServiceWorker();
 
+
   /*
-   * Wisp WebSocket address.
+   * Wisp connection.
    */
   const wispUrl =
     (
@@ -119,42 +190,42 @@ async function getController() {
 
 
   /*
-   * IMPORTANT:
-   *
-   * Forknut now uses LIBCURL instead of Epoxy.
-   *
-   * This must match:
-   *
-   * /libcurl/index.mjs
+   * Load Libcurl from the static
+   * /libcurl/ directory.
    */
   let LibcurlClient;
 
+
   try {
+
     const libcurl =
       await import(
         "/libcurl/index.mjs"
       );
 
+
     LibcurlClient =
       libcurl.default;
 
   } catch (error) {
+
     console.error(
-      "Could not load Libcurl:",
+      "Libcurl loading error:",
       error
     );
 
     throw new Error(
-      "Forknut could not load its Libcurl transport. Make sure the latest server.js is deployed on Render."
+      "Forknut could not load its Libcurl transport."
     );
   }
 
 
   if (
-    typeof LibcurlClient !== "function"
+    typeof LibcurlClient !==
+    "function"
   ) {
     throw new Error(
-      "Forknut loaded Libcurl incorrectly."
+      "Forknut loaded an invalid Libcurl transport."
     );
   }
 
@@ -169,7 +240,7 @@ async function getController() {
 
 
   /*
-   * Initialise transport.
+   * Start Libcurl.
    */
   await transport.init();
 
@@ -178,47 +249,59 @@ async function getController() {
    * Create Scramjet controller.
    */
   controller =
-    new $scramjetController.Controller({
-      serviceworker: serviceWorker,
+    new $scramjetController.Controller(
+      {
+        serviceworker:
+          serviceWorker,
 
-      transport: transport,
+        transport:
+          transport,
 
-      config: {
-        prefix: "/~/sj/",
+        config: {
+          prefix:
+            "/~/sj/",
 
-        scramjetPath:
-          "/scramjet/scramjet.js",
+          scramjetPath:
+            "/scramjet/scramjet.js",
 
-        wasmPath:
-          "/scramjet/scramjet.wasm",
+          wasmPath:
+            "/scramjet/scramjet.wasm",
 
-        injectPath:
-          "/controller/controller.inject.js"
+          injectPath:
+            "/controller/controller.inject.js"
+        }
       }
-    });
+    );
 
 
   /*
-   * Wait for Scramjet.
+   * Wait until Scramjet is ready.
    */
   await controller.wait();
+
 
   return controller;
 }
 
 
+/*
+ * Open a website through Forknut.
+ */
 async function browse(url) {
+
   try {
+
     setStatus(
-      "Starting Forknut..."
+      "Starting proxy..."
     );
+
 
     const sj =
       await getController();
 
 
     /*
-     * Create the proxy iframe once.
+     * Create iframe/frame once.
      */
     if (!frame) {
 
@@ -268,7 +351,7 @@ async function browse(url) {
 
 
       /*
-       * Create Scramjet frame.
+       * Create the Scramjet frame.
        */
       frame =
         sj.createFrame(
@@ -277,27 +360,28 @@ async function browse(url) {
             plugins: [
 
               /*
-               * Cache resources such as
-               * images and scripts.
+               * Cache website resources.
                */
               new $scramjetUtils.HttpCachePlugin(),
 
 
               /*
-               * Keep the address/status updated.
+               * Watch navigation.
                */
               new $scramjetUtils.UrlWatcherPlugin(
                 (currentUrl) => {
+
                   setStatus(
                     currentUrl
                   );
+
                 }
               ),
 
 
               /*
-               * Catch links that escape
-               * the proxy.
+               * Keep links/popups inside
+               * Forknut where possible.
                */
               new $scramjetUtils.CatchEscapedLinksPlugin(
                 () =>
@@ -313,7 +397,7 @@ async function browse(url) {
 
 
     /*
-     * Show browser.
+     * Show proxy browser.
      */
     shell.classList.add(
       "hidden"
@@ -334,7 +418,10 @@ async function browse(url) {
 
 
     /*
-     * Navigate through Scramjet.
+     * Navigate.
+     *
+     * frame.go() is intentionally
+     * not awaited.
      */
     frame.go(url);
 
@@ -346,6 +433,7 @@ async function browse(url) {
       error
     );
 
+
     setStatus(
       error?.message ||
       "Forknut could not load this website."
@@ -355,7 +443,7 @@ async function browse(url) {
 
 
 /*
- * Search / URL form.
+ * Main URL form.
  */
 if (form) {
 
@@ -365,6 +453,7 @@ if (form) {
 
       event.preventDefault();
 
+
       try {
 
         const url =
@@ -372,7 +461,10 @@ if (form) {
             input.value
           );
 
-        await browse(url);
+
+        await browse(
+          url
+        );
 
       } catch (error) {
 
@@ -381,11 +473,13 @@ if (form) {
           error
         );
 
+
         setStatus(
           error?.message ||
           "Something went wrong."
         );
       }
+
     }
   );
 }
@@ -404,21 +498,26 @@ if (homeButton) {
         "active"
       );
 
+
       shell.classList.remove(
         "hidden"
       );
+
 
       homeButton.classList.remove(
         "visible"
       );
 
+
       setStatus(
         "Ready"
       );
 
+
       if (input) {
         input.focus();
       }
+
     }
   );
 }
@@ -427,4 +526,6 @@ if (homeButton) {
 /*
  * Initial status.
  */
-setStatus("Ready");
+setStatus(
+  "Ready"
+);
