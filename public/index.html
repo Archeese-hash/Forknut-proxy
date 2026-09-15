@@ -4,49 +4,645 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
+
 <title>Forknut Proxy</title>
+
 <style>
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b1020;color:#f7f8ff;overflow:hidden}
-body{min-height:100%;display:grid;place-items:center}
-.wrap{width:min(760px,92vw);text-align:center;position:relative;z-index:2}
-.logo{font-size:20px;font-weight:800;letter-spacing:.5px;margin-bottom:55px}.logo span{display:inline-block;background:#6d5dfc;padding:8px 10px;border-radius:10px;margin-right:8px}
-h1{font-size:clamp(38px,7vw,68px);margin:0 0 16px;line-height:1.02}
-p{color:#aeb6cf;font-size:18px;margin:0 auto 34px;max-width:600px}
-form{display:flex;background:#151c31;border:1px solid #2b3552;border-radius:16px;padding:7px;box-shadow:0 18px 60px #0006}
-input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:white;font-size:16px;padding:15px}
-button{border:0;border-radius:11px;padding:13px 24px;background:#6d5dfc;color:white;font-weight:750;font-size:15px;cursor:pointer}
-button:hover{filter:brightness(1.08)}
-.note{font-size:13px;color:#77819d;margin-top:18px}.note strong{display:block;font-size:20px;color:#aeb6cf;margin-bottom:6px}
-#status{font-size:13px;color:#77819d;margin-top:14px;min-height:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#browser{display:none;position:fixed;inset:0;background:#fff;z-index:5}
-#browser.active{display:block}
-.proxy-frame{display:block;width:100%;height:100%;border:0;background:#fff}
-#homeButton{display:none;position:fixed;right:14px;top:max(14px,env(safe-area-inset-top));z-index:10;border:0;background:#151c31;color:#fff;border:1px solid #2b3552;border-radius:12px;padding:10px 14px;font-weight:700;box-shadow:0 8px 30px #0006}
-#homeButton.visible{display:block}
-.hidden{visibility:hidden;pointer-events:none}
-@media(max-width:560px){form{padding:6px}button{padding:12px 16px}input{font-size:15px}.logo{margin-bottom:40px}}
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: #0b1020;
+  color: #f7f8ff;
+  overflow: hidden;
+}
+
+body {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* HOME */
+
+.wrap {
+  width: min(760px, 92vw);
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  margin-bottom: 55px;
+}
+
+.logo span {
+  display: inline-block;
+  background: #6d5dfc;
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin-right: 8px;
+}
+
+h1 {
+  font-size: clamp(38px, 7vw, 68px);
+  margin: 0 0 16px;
+  line-height: 1.02;
+}
+
+p {
+  color: #aeb6cf;
+  font-size: 18px;
+  margin: 0 auto 34px;
+  max-width: 600px;
+}
+
+form {
+  display: flex;
+  background: #151c31;
+  border: 1px solid #2b3552;
+  border-radius: 16px;
+  padding: 7px;
+  box-shadow: 0 18px 60px #0006;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: white;
+  font-size: 16px;
+  padding: 15px;
+}
+
+button {
+  border: 0;
+  border-radius: 11px;
+  padding: 13px 24px;
+  background: #6d5dfc;
+  color: white;
+  font-weight: 750;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}
+
+.note {
+  font-size: 13px;
+  color: #77819d;
+  margin-top: 18px;
+}
+
+.note strong {
+  display: block;
+  font-size: 20px;
+  color: #aeb6cf;
+  margin-bottom: 6px;
+}
+
+#status {
+  font-size: 13px;
+  color: #77819d;
+  margin-top: 14px;
+  min-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* PROXY */
+
+#browser {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 5;
+}
+
+#browser.active {
+  display: block;
+}
+
+.proxy-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+#homeButton {
+  display: none;
+  position: fixed;
+  right: 14px;
+  top: max(14px, env(safe-area-inset-top));
+  z-index: 20;
+  border: 1px solid #2b3552;
+  background: #151c31;
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  box-shadow: 0 8px 30px #0006;
+}
+
+#homeButton.visible {
+  display: block;
+}
+
+.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* GAMES TAB */
+
+#gamesTab {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+
+  background: #151c31;
+  color: white;
+
+  border: 1px solid #2b3552;
+  border-left: 0;
+
+  border-radius: 0 14px 14px 0;
+
+  padding: 13px 10px;
+
+  font-size: 14px;
+  font-weight: 800;
+
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+
+  cursor: pointer;
+
+  box-shadow: 0 8px 30px #0007;
+}
+
+#gamesTab:hover {
+  background: #6d5dfc;
+}
+
+/* GAME PANEL */
+
+#gamesPanel {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+
+  width: min(390px, 88vw);
+
+  background: #0d1325;
+
+  border-right: 1px solid #2b3552;
+
+  z-index: 40;
+
+  transform: translateX(-105%);
+
+  transition: transform .25s ease;
+
+  box-shadow: 15px 0 50px #0009;
+
+  overflow-y: auto;
+}
+
+#gamesPanel.open {
+  transform: translateX(0);
+}
+
+.gamesHeader {
+  position: sticky;
+  top: 0;
+
+  background: #0d1325;
+
+  padding: 20px;
+
+  border-bottom: 1px solid #252e49;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  z-index: 2;
+}
+
+.gamesTitle {
+  font-size: 24px;
+  font-weight: 850;
+}
+
+.gamesSubtitle {
+  color: #7f89a5;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+#closeGames {
+  background: #1a2239;
+  border: 1px solid #303a58;
+
+  width: 40px;
+  height: 40px;
+
+  padding: 0;
+
+  border-radius: 12px;
+
+  font-size: 20px;
+}
+
+/* GAME GRID */
+
+.gamesGrid {
+  padding: 16px;
+
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 12px;
+}
+
+.gameCard {
+  min-height: 120px;
+
+  border: 1px solid #303a58;
+
+  border-radius: 15px;
+
+  padding: 14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #1a2239,
+      #11182b
+    );
+
+  color: white;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    transform .15s ease,
+    border-color .15s ease,
+    background .15s ease;
+}
+
+.gameCard:hover {
+  transform: translateY(-2px);
+  border-color: #6d5dfc;
+}
+
+.gameEmoji {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.gameName {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.gameType {
+  color: #7f89a5;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* MOBILE */
+
+@media(max-width:560px) {
+
+  form {
+    padding: 6px;
+  }
+
+  button {
+    padding: 12px 16px;
+  }
+
+  input {
+    font-size: 15px;
+  }
+
+  .logo {
+    margin-bottom: 40px;
+  }
+
+  .gamesGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 </style>
 </head>
-<body>
-<main class="wrap" id="shell">
-  <div class="logo"><span>✦</span>Forknut Proxy</div>
-  <h1>Browse the web simply.</h1>
-  <p>Enter a website address below.</p>
-  <form id="proxyForm">
-    <input id="url" type="text" placeholder="https://example.com" autocomplete="off" autocapitalize="none" spellcheck="false" required>
-    <button type="submit">Go</button>
-  </form>
-  <div class="note"><strong>Made by Archie Faulkner</strong>Forknut Proxy</div>
-  <div id="status" aria-live="polite">Ready</div>
-</main>
-<div id="browser" aria-label="Forknut Proxy browser"></div>
-<button id="homeButton" type="button">← Home</button>
 
-<!-- Scramjet 2.x runtime: core first, controller second, utils third. -->
+<body>
+
+<!-- HOME PAGE -->
+
+<main class="wrap" id="shell">
+
+  <div class="logo">
+    <span>✦</span>
+    Forknut Proxy
+  </div>
+
+  <h1>Browse the web simply.</h1>
+
+  <p>
+    Enter a website address below.
+  </p>
+
+  <form id="proxyForm">
+
+    <input
+      id="url"
+      type="text"
+      placeholder="https://example.com"
+      autocomplete="off"
+      autocapitalize="none"
+      spellcheck="false"
+      required
+    >
+
+    <button type="submit">
+      Go
+    </button>
+
+  </form>
+
+  <div class="note">
+    <strong>Made by Archie Faulkner</strong>
+    Forknut Proxy
+  </div>
+
+  <div id="status" aria-live="polite">
+    Ready
+  </div>
+
+</main>
+
+
+<!-- GAMES BUTTON -->
+
+<button id="gamesTab" type="button">
+  🎮 Games
+</button>
+
+
+<!-- GAMES PANEL -->
+
+<aside id="gamesPanel">
+
+  <div class="gamesHeader">
+
+    <div>
+      <div class="gamesTitle">
+        🎮 Games
+      </div>
+
+      <div class="gamesSubtitle">
+        Pick a game and play
+      </div>
+    </div>
+
+    <button id="closeGames" type="button">
+      ×
+    </button>
+
+  </div>
+
+
+  <div class="gamesGrid">
+
+    <button
+      class="gameCard"
+      data-url="https://playslope.io/"
+    >
+      <div class="gameEmoji">⚽</div>
+      <div class="gameName">Slope</div>
+      <div class="gameType">Arcade</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://play2048.co/"
+    >
+      <div class="gameEmoji">🔢</div>
+      <div class="gameName">2048</div>
+      <div class="gameType">Puzzle</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://cookieclicker.com/"
+    >
+      <div class="gameEmoji">🍪</div>
+      <div class="gameName">Cookie Clicker</div>
+      <div class="gameType">Clicker</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://tetris.com/play-tetris"
+    >
+      <div class="gameEmoji">🧱</div>
+      <div class="gameName">Tetris</div>
+      <div class="gameType">Puzzle</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://run3.io/"
+    >
+      <div class="gameEmoji">🏃</div>
+      <div class="gameName">Run 3</div>
+      <div class="gameType">Runner</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://geometrydash.io/"
+    >
+      <div class="gameEmoji">🔺</div>
+      <div class="gameName">Geometry Dash</div>
+      <div class="gameType">Platformer</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://drifthunters.io/"
+    >
+      <div class="gameEmoji">🏎️</div>
+      <div class="gameName">Drift Hunters</div>
+      <div class="gameType">Racing</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://motox3m.io/"
+    >
+      <div class="gameEmoji">🏍️</div>
+      <div class="gameName">Moto X3M</div>
+      <div class="gameType">Racing</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://stickmanhook.io/"
+    >
+      <div class="gameEmoji">🪝</div>
+      <div class="gameName">Stickman Hook</div>
+      <div class="gameType">Action</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://snowrider3d.com/"
+    >
+      <div class="gameEmoji">🏂</div>
+      <div class="gameName">Snow Rider 3D</div>
+      <div class="gameType">3D</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://basketballstars.io/"
+    >
+      <div class="gameEmoji">🏀</div>
+      <div class="gameName">Basketball Stars</div>
+      <div class="gameType">Sports</div>
+    </button>
+
+
+    <button
+      class="gameCard"
+      data-url="https://flappybird.io/"
+    >
+      <div class="gameEmoji">🐦</div>
+      <div class="gameName">Flappy Bird</div>
+      <div class="gameType">Arcade</div>
+    </button>
+
+  </div>
+
+</aside>
+
+
+<!-- PROXY BROWSER -->
+
+<div
+  id="browser"
+  aria-label="Forknut Proxy browser"
+></div>
+
+
+<button
+  id="homeButton"
+  type="button"
+>
+  ← Home
+</button>
+
+
+<!-- SCRAMJET -->
+
 <script src="/scramjet/scramjet.js"></script>
+
 <script src="/controller/controller.api.js"></script>
+
 <script src="/utils/scramjet-utils.js"></script>
+
 <script src="/app.js"></script>
+
+
+<!-- GAMES LOGIC -->
+
+<script>
+const gamesTab =
+  document.getElementById("gamesTab");
+
+const gamesPanel =
+  document.getElementById("gamesPanel");
+
+const closeGames =
+  document.getElementById("closeGames");
+
+gamesTab.addEventListener("click", () => {
+  gamesPanel.classList.add("open");
+});
+
+closeGames.addEventListener("click", () => {
+  gamesPanel.classList.remove("open");
+});
+
+
+document.querySelectorAll(".gameCard").forEach(card => {
+
+  card.addEventListener("click", () => {
+
+    const url =
+      card.getAttribute("data-url");
+
+    gamesPanel.classList.remove("open");
+
+    const input =
+      document.getElementById("url");
+
+    input.value = url;
+
+    const form =
+      document.getElementById("proxyForm");
+
+    form.requestSubmit();
+
+  });
+
+});
+</script>
+
 </body>
 </html>
