@@ -19,9 +19,9 @@ const publicPath = path.join(
   "public"
 );
 
-function dirOf(specifier) {
+function dirOf(packageName) {
   return path.dirname(
-    require.resolve(specifier)
+    require.resolve(packageName)
   );
 }
 
@@ -55,7 +55,9 @@ const app = Fastify({
               "http://localhost"
             ).pathname;
 
-          if (pathname === "/wisp/") {
+          if (
+            pathname === "/wisp/"
+          ) {
 
             req.url = "/wisp/";
 
@@ -71,7 +73,12 @@ const app = Fastify({
 
           }
 
-        } catch {
+        } catch (error) {
+
+          console.error(
+            "WebSocket error:",
+            error
+          );
 
           socket.end();
 
@@ -86,42 +93,42 @@ const app = Fastify({
 
 
 /*
- * SECURITY / CROSS-ORIGIN SETTINGS
- *
- * Scramjet needs cross-origin isolation.
- *
- * "credentialless" is important here:
- * it allows public cross-origin resources such
- * as images, fonts, video and game assets to load
- * without requiring every remote server to send CORP.
- */
+==================================================
+IMPORTANT
+==================================================
 
-app.addHook(
-  "onSend",
-  async (_request, reply) => {
+DO NOT SET:
 
-    reply.header(
-      "Cross-Origin-Opener-Policy",
-      "same-origin"
-    );
+Cross-Origin-Embedder-Policy
 
-    reply.header(
-      "Cross-Origin-Embedder-Policy",
-      "credentialless"
-    );
+DO NOT SET:
 
-    reply.header(
-      "Cross-Origin-Resource-Policy",
-      "cross-origin"
-    );
+Cross-Origin-Opener-Policy
 
-  }
-);
+We are deliberately leaving these headers OFF.
+
+This allows normal cross-origin resources inside
+Scramjet pages, including:
+
+images
+videos
+game assets
+fonts
+CSS
+JavaScript
+audio
+
+Scramjet's service worker/controller handles the
+proxying itself.
+==================================================
+*/
 
 
 /*
- * SCRAMJET
- */
+==================================================
+SCRAMJET
+==================================================
+*/
 
 await app.register(
   fastifyStatic,
@@ -134,8 +141,10 @@ await app.register(
 
 
 /*
- * SCRAMJET CONTROLLER
- */
+==================================================
+CONTROLLER
+==================================================
+*/
 
 await app.register(
   fastifyStatic,
@@ -148,8 +157,10 @@ await app.register(
 
 
 /*
- * SCRAMJET UTILS
- */
+==================================================
+UTILS
+==================================================
+*/
 
 await app.register(
   fastifyStatic,
@@ -162,8 +173,10 @@ await app.register(
 
 
 /*
- * EPOXY
- */
+==================================================
+EPOXY
+==================================================
+*/
 
 await app.register(
   fastifyStatic,
@@ -176,8 +189,10 @@ await app.register(
 
 
 /*
- * FORKNUT WEBSITE
- */
+==================================================
+FORKNUT WEBSITE
+==================================================
+*/
 
 await app.register(
   fastifyStatic,
@@ -189,8 +204,10 @@ await app.register(
 
 
 /*
- * HEALTH CHECK
- */
+==================================================
+HEALTH CHECK
+==================================================
+*/
 
 app.get(
   "/health",
@@ -199,9 +216,9 @@ app.get(
     return {
       ok: true,
       service: "Forknut Proxy",
-      version: "3.0.0",
+      scramjet: "2.0.67-alpha.2",
       transport: "epoxy",
-      resources: "credentialless"
+      crossOriginIsolation: false
     };
 
   }
@@ -209,8 +226,10 @@ app.get(
 
 
 /*
- * START
- */
+==================================================
+START
+==================================================
+*/
 
 const port =
   Number(
@@ -221,3 +240,7 @@ await app.listen({
   host: "0.0.0.0",
   port
 });
+
+console.log(
+  `Forknut Proxy running on port ${port}`
+);
