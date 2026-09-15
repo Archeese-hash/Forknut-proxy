@@ -19,26 +19,33 @@ const publicPath = path.join(
   "public"
 );
 
-function dirOf(packageName) {
+function packagePath(packageName) {
   return path.dirname(
     require.resolve(packageName)
   );
 }
 
 const controllerPath =
-  dirOf("@mercuryworkshop/scramjet-controller");
+  packagePath(
+    "@mercuryworkshop/scramjet-controller"
+  );
 
 const utilsPath =
-  dirOf("@mercuryworkshop/scramjet-utils");
+  packagePath(
+    "@mercuryworkshop/scramjet-utils"
+  );
 
 const libcurlPath =
-  dirOf("@mercuryworkshop/libcurl-transport");
+  packagePath(
+    "@mercuryworkshop/libcurl-transport"
+  );
 
 const app = Fastify({
   logger: true,
 
   serverFactory: (handler) => {
-    const server = http.createServer(handler);
+    const server =
+      http.createServer(handler);
 
     server.on(
       "upgrade",
@@ -50,7 +57,9 @@ const app = Fastify({
               "http://localhost"
             ).pathname;
 
-          if (pathname === "/wisp/") {
+          if (
+            pathname === "/wisp/"
+          ) {
             req.url = "/wisp/";
 
             wisp.routeRequest(
@@ -76,13 +85,14 @@ const app = Fastify({
   }
 });
 
+
 /*
- * Scramjet needs cross-origin isolation
- * for its browser-side engine.
+ * Cross-origin isolation
  */
 app.addHook(
   "onSend",
   async (_request, reply) => {
+
     reply.header(
       "Cross-Origin-Opener-Policy",
       "same-origin"
@@ -92,8 +102,10 @@ app.addHook(
       "Cross-Origin-Embedder-Policy",
       "require-corp"
     );
+
   }
 );
+
 
 /*
  * Scramjet
@@ -107,8 +119,9 @@ await app.register(
   }
 );
 
+
 /*
- * Scramjet controller
+ * Controller
  */
 await app.register(
   fastifyStatic,
@@ -119,8 +132,9 @@ await app.register(
   }
 );
 
+
 /*
- * Scramjet utilities
+ * Utils
  */
 await app.register(
   fastifyStatic,
@@ -131,9 +145,15 @@ await app.register(
   }
 );
 
+
 /*
- * IMPORTANT:
- * Use Libcurl instead of Epoxy.
+ * LIBCURL
+ *
+ * This serves:
+ *
+ * /libcurl/index.mjs
+ * /libcurl/index.js
+ * and the libcurl WASM files.
  */
 await app.register(
   fastifyStatic,
@@ -143,6 +163,7 @@ await app.register(
     decorateReply: false
   }
 );
+
 
 /*
  * Forknut website
@@ -155,17 +176,26 @@ await app.register(
   }
 );
 
+
+/*
+ * Health check
+ */
 app.get(
   "/health",
   async () => {
     return {
       ok: true,
       service: "Forknut Proxy",
-      transport: "libcurl"
+      transport: "libcurl",
+      scramjet: "2.0.67-alpha.2"
     };
   }
 );
 
+
+/*
+ * Start server
+ */
 const port =
   Number(
     process.env.PORT || 3000
