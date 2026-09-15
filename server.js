@@ -31,34 +31,26 @@ const controllerPath =
 const utilsPath =
   dirOf("@mercuryworkshop/scramjet-utils");
 
-const epoxyPath =
-  dirOf("@mercuryworkshop/epoxy-transport");
-
+const libcurlPath =
+  dirOf("@mercuryworkshop/libcurl-transport");
 
 const app = Fastify({
   logger: true,
 
   serverFactory: (handler) => {
-
-    const server =
-      http.createServer(handler);
+    const server = http.createServer(handler);
 
     server.on(
       "upgrade",
       (req, socket, head) => {
-
         try {
-
           const pathname =
             new URL(
               req.url || "/",
               "http://localhost"
             ).pathname;
 
-          if (
-            pathname === "/wisp/"
-          ) {
-
+          if (pathname === "/wisp/") {
             req.url = "/wisp/";
 
             wisp.routeRequest(
@@ -66,24 +58,17 @@ const app = Fastify({
               socket,
               head
             );
-
           } else {
-
             socket.end();
-
           }
-
         } catch (error) {
-
           console.error(
-            "WebSocket error:",
+            "Wisp error:",
             error
           );
 
           socket.end();
-
         }
-
       }
     );
 
@@ -91,45 +76,28 @@ const app = Fastify({
   }
 });
 
+/*
+ * Scramjet needs cross-origin isolation
+ * for its browser-side engine.
+ */
+app.addHook(
+  "onSend",
+  async (_request, reply) => {
+    reply.header(
+      "Cross-Origin-Opener-Policy",
+      "same-origin"
+    );
+
+    reply.header(
+      "Cross-Origin-Embedder-Policy",
+      "require-corp"
+    );
+  }
+);
 
 /*
-==================================================
-IMPORTANT
-==================================================
-
-DO NOT SET:
-
-Cross-Origin-Embedder-Policy
-
-DO NOT SET:
-
-Cross-Origin-Opener-Policy
-
-We are deliberately leaving these headers OFF.
-
-This allows normal cross-origin resources inside
-Scramjet pages, including:
-
-images
-videos
-game assets
-fonts
-CSS
-JavaScript
-audio
-
-Scramjet's service worker/controller handles the
-proxying itself.
-==================================================
-*/
-
-
-/*
-==================================================
-SCRAMJET
-==================================================
-*/
-
+ * Scramjet
+ */
 await app.register(
   fastifyStatic,
   {
@@ -139,13 +107,9 @@ await app.register(
   }
 );
 
-
 /*
-==================================================
-CONTROLLER
-==================================================
-*/
-
+ * Scramjet controller
+ */
 await app.register(
   fastifyStatic,
   {
@@ -155,13 +119,9 @@ await app.register(
   }
 );
 
-
 /*
-==================================================
-UTILS
-==================================================
-*/
-
+ * Scramjet utilities
+ */
 await app.register(
   fastifyStatic,
   {
@@ -171,29 +131,22 @@ await app.register(
   }
 );
 
-
 /*
-==================================================
-EPOXY
-==================================================
-*/
-
+ * IMPORTANT:
+ * Use Libcurl instead of Epoxy.
+ */
 await app.register(
   fastifyStatic,
   {
-    root: epoxyPath,
-    prefix: "/epoxy/",
+    root: libcurlPath,
+    prefix: "/libcurl/",
     decorateReply: false
   }
 );
 
-
 /*
-==================================================
-FORKNUT WEBSITE
-==================================================
-*/
-
+ * Forknut website
+ */
 await app.register(
   fastifyStatic,
   {
@@ -202,34 +155,16 @@ await app.register(
   }
 );
 
-
-/*
-==================================================
-HEALTH CHECK
-==================================================
-*/
-
 app.get(
   "/health",
   async () => {
-
     return {
       ok: true,
       service: "Forknut Proxy",
-      scramjet: "2.0.67-alpha.2",
-      transport: "epoxy",
-      crossOriginIsolation: false
+      transport: "libcurl"
     };
-
   }
 );
-
-
-/*
-==================================================
-START
-==================================================
-*/
 
 const port =
   Number(
