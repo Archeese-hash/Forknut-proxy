@@ -1,21 +1,12 @@
 importScripts("/controller/controller.sw.js");
 
-// Forknut v11: image requests get a second chance through the server-side
-// image proxy when WebKit/Scramjet cannot deliver the original response.
-
-self.addEventListener("install", () => {
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", event => {
-  event.waitUntil(self.clients.claim());
-});
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
 
 function extractOriginalUrl(value) {
   let text = String(value || "");
   const candidates = [];
-
-  for (let pass = 0; pass < 4; pass++) {
+  for (let pass = 0; pass < 5; pass++) {
     const matches = text.match(/https?:\/\/[^\s"'<>]+/gi) || [];
     for (const item of matches) {
       try { candidates.push(new URL(item.replace(/[),;]+$/, "")).href); } catch {}
@@ -26,7 +17,6 @@ function extractOriginalUrl(value) {
       text = decoded;
     } catch { break; }
   }
-
   try {
     const parsed = new URL(text);
     for (const key of ["imgurl", "mediaurl", "image_url", "url", "src", "u"]) {
@@ -34,96 +24,66 @@ function extractOriginalUrl(value) {
       if (candidate && /^https?:\/\//i.test(candidate)) candidates.unshift(candidate);
     }
   } catch {}
-
   const ownHost = self.location.hostname.toLowerCase();
-  const scored = [];
-  for (const candidate of candidates) {
+  const scored = candidates.map(href => {
     try {
-      const parsed = new URL(candidate);
-      const host = parsed.hostname.toLowerCase();
-      if (!host || host === ownHost || host.endsWith(".onrender.com")) continue;
+      const u = new URL(href), host = u.hostname.toLowerCase();
+      if (!host || host === ownHost || host.endsWith(".onrender.com")) return null;
       let score = 0;
-      if (host === "i.ytimg.com" || host.endsWith(".ytimg.com")) score += 100;
-      if (host === "googleusercontent.com" || host.endsWith(".googleusercontent.com")) score += 90;
-      if (host === "gstatic.com" || host.endsWith(".gstatic.com")) score += 80;
-      if (host === "ggpht.com" || host.endsWith(".ggpht.com")) score += 80;
-      if (/[.](jpg|jpeg|png|webp|gif|avif|svg)(?:$|[?#])/i.test(parsed.pathname)) score += 60;
-      if (/\/vi(?:_webp)?\//i.test(parsed.pathname)) score += 100;
-      if (/\/search(?:[/?]|$)/i.test(parsed.pathname)) score -= 50;
-      if (host === "google.com" || host.endsWith(".google.com")) score -= 30;
-      scored.push({ href: parsed.href, score });
-    } catch {}
-  }
-  scored.sort((a, b) => b.score - a.score);
+      if (host === "i.ytimg.com" || host.endsWith(".ytimg.com")) score += 200;
+      if (host === "googleusercontent.com" || host.endsWith(".googleusercontent.com")) score += 180;
+      if (host === "gstatic.com" || host.endsWith(".gstatic.com")) score += 160;
+      if (host === "ggpht.com" || host.endsWith(".ggpht.com")) score += 160;
+      if (/\.(jpg|jpeg|png|webp|gif|avif|svg)(?:$|[?#])/i.test(u.pathname)) score += 100;
+      if (/\/vi(?:_webp)?\//i.test(u.pathname)) score += 200;
+      if (/\/search(?:[/?]|$)/i.test(u.pathname)) score -= 100;
+      if (host === "google.com" || host.endsWith(".google.com")) score -= 80;
+      return { href: u.href, score };
+    } catch { return null; }
+  }).filter(Boolean).sort((a,b)=>b.score-a.score);
   return scored[0]?.href || "";
 }
 
-function looksLikeImage(response) {
-  if (!response) return false;
-  if (!response.ok) return false;
-  const type = (response.headers.get("content-type") || "").toLowerCase();
-  return type.startsWith("image/") || type === "application/octet-stream";
+function youtubeId(value) {
+  const match = String(value || "").match(/(?:i\.)?ytimg\.com\/(?:vi|vi_webp)\/([A-Za-z0-9_-]{6,20})/i);
+  return match ? match[1] : null;
 }
 
 async function fallbackImage(request) {
-  const original = extractOriginalUrl(request.url);
-  // If the Scramjet URL cannot be decoded client-side, let the server do the
-  // same extraction. This is important for Google Images URLs, which often
-  // contain several layers of encoding.
-  const target = original || request.url;
-
-  const endpoint =
-    "/__forknut/image?url=" + encodeURIComponent(target);
-
+  const id = youtubeId(request.url);
+  const target = id
+    ? "/__forknut/youtube-thumb/" + encodeURIComponent(id)
+    : "/__forknut/image?url=" + encodeURIComponent(extractOriginalUrl(request.url) || request.url);
   try {
-    const response = await fetch(endpoint, {
-      method: "GET",
-      headers: {
-        "accept": request.headers.get("accept") || "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
-      },
-      cache: "no-store"
-    });
-
+    const response = await fetch(target, { cache: "no-store" });
     if (response.ok) return response;
   } catch (error) {
-    console.error("[Forknut] Image fallback failed:", error);
+    console.error("[Forknut] media fallback failed", error);
   }
-
   return null;
 }
 
 self.addEventListener("fetch", event => {
   try {
     if (!$scramjetController.shouldRoute(event)) return;
-
     const request = event.request;
-
+    if (request.destination !== "image") {
+      event.respondWith($scramjetController.route(event));
+      return;
+    }
     event.respondWith((async () => {
-      const isImage = request.destination === "image";
-
+      // On iPad/WebKit, a failed/500 Scramjet image is common enough that the
+      // first fallback should happen immediately rather than after another
+      // route() call that can itself fail while transferring a stream.
+      const fallback = await fallbackImage(request);
+      if (fallback) return fallback;
       try {
-        const response = await $scramjetController.route(event);
-
-        if (!isImage || looksLikeImage(response)) {
-          return response;
-        }
+        return await $scramjetController.route(event);
       } catch (error) {
-        if (!isImage) {
-          console.error("[Forknut] Service worker routing error:", error);
-          throw error;
-        }
+        return new Response("Forknut image unavailable: " + (error?.message || error), { status: 502 });
       }
-
-      if (isImage) {
-        const fallback = await fallbackImage(request);
-        if (fallback) return fallback;
-      }
-
-      // If it was an image and both paths failed, retry Scramjet's normal
-      // route once so its native error response is preserved.
-      return $scramjetController.route(event);
     })());
   } catch (error) {
-    console.error("[Forknut] Service worker setup error:", error);
+    console.error("[Forknut] SW error", error);
   }
 });
