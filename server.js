@@ -40,9 +40,9 @@ const utilsPath =
     "@mercuryworkshop/scramjet-utils"
   );
 
-const libcurlPath =
+const epoxyPath =
   dirOf(
-    "@mercuryworkshop/libcurl-transport"
+    "@mercuryworkshop/epoxy-transport"
   );
 
 
@@ -125,7 +125,7 @@ const app = Fastify({
 
 
 /* -------------------------------- */
-/* Security / cross-origin headers */
+/* Cross-origin headers */
 /* -------------------------------- */
 
 app.addHook(
@@ -135,41 +135,20 @@ app.addHook(
     reply
   ) => {
 
-    /*
-     * Scramjet needs the page to remain
-     * cross-origin isolated.
-     *
-     * COOP stays the normal Scramjet value.
-     */
-
     reply.header(
       "Cross-Origin-Opener-Policy",
       "same-origin"
     );
 
-
     /*
-     * IMPORTANT:
-     *
-     * We are testing credentialless instead
-     * of require-corp.
-     *
-     * This allows compatible cross-origin
-     * images/resources to load even when
-     * their original server doesn't provide
-     * a CORP header.
+     * Keep credentialless from our
+     * previous test.
      */
 
     reply.header(
       "Cross-Origin-Embedder-Policy",
       "credentialless"
     );
-
-
-    /*
-     * Allow resources served by Forknut itself
-     * to be used safely by the proxy shell.
-     */
 
     reply.header(
       "Cross-Origin-Resource-Policy",
@@ -178,7 +157,7 @@ app.addHook(
 
 
     /*
-     * Service worker must never be cached.
+     * Never cache the service worker.
      */
 
     if (
@@ -262,17 +241,17 @@ await app.register(
 
 
 /* -------------------------------- */
-/* Libcurl transport */
+/* Epoxy transport */
 /* -------------------------------- */
 
 await app.register(
   fastifyStatic,
   {
     root:
-      libcurlPath,
+      epoxyPath,
 
     prefix:
-      "/libcurl/",
+      "/epoxy/",
 
     decorateReply:
       false
@@ -318,7 +297,7 @@ app.get(
         "0.0.14",
 
       transport:
-        "libcurl",
+        "epoxy",
 
       wisp:
         true,
