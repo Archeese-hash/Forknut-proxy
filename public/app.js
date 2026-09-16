@@ -24,6 +24,8 @@ let diagnosticObserver = null;
 let diagnosticSeenResources = new Set();
 let diagnosticImageCount = 0;
 let diagnosticFailureCount = 0;
+let serverDiagnosticSeen = new Set();
+let serverDiagnosticPoller = null;
 
 function ensureDiagnosticPanel() {
   if (diagnosticPanel) return diagnosticPanel;
@@ -52,7 +54,7 @@ function ensureDiagnosticPanel() {
 
   const title = document.createElement("div");
   title.style.cssText = "font-weight:700;margin-bottom:7px";
-  title.textContent = "Forknut Diagnostic v3 â HTTP ERROR BODY";
+  title.textContent = "Forknut Diagnostic v4 â SERVER EXCEPTIONS";
 
   const controls = document.createElement("div");
   controls.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px";
@@ -64,7 +66,20 @@ function ensureDiagnosticPanel() {
     diagnosticSeenResources.clear();
     diagnosticImageCount = 0;
     diagnosticFailureCount = 0;
+    serverDiagnosticSeen.clear();
     renderDiagnosticPanel();
+  };
+
+  const serverClear = document.createElement("button");
+  serverClear.textContent = "Clear server log";
+  serverClear.onclick = async () => {
+    try {
+      await fetch("/__forknut/diag", { method: "DELETE", cache: "no-store" });
+      serverDiagnosticSeen.clear();
+      diagnosticLog("UI", "server diagnostic log cleared");
+    } catch (e) {
+      diagnosticLog("UI", "server log clear failed", { error: String(e) });
+    }
   };
 
   const probe = document.createElement("button");
@@ -86,7 +101,7 @@ function ensureDiagnosticPanel() {
     }
   };
 
-  for (const b of [clear, probe, copy]) {
+  for (const b of [clear, probe, serverClear, copy]) {
     b.style.cssText = "font:12px -apple-system;padding:5px 8px;border-radius:7px;border:0";
     controls.appendChild(b);
   }
@@ -101,6 +116,7 @@ function ensureDiagnosticPanel() {
 
   diagnosticPanel.append(title, controls, summary, output);
   document.body.appendChild(diagnosticPanel);
+  startServerDiagnosticPolling();
   return diagnosticPanel;
 }
 
@@ -147,6 +163,37 @@ function diagnosticLog(type, message, extra = {}) {
       keepalive: true
     }).catch(() => {});
   } catch {}
+}
+
+async function pollServerDiagnostics() {
+  try {
+    const response = await fetch("/__forknut/diag?ts=" + Date.now(), { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    const events = Array.isArray(data.events) ? data.events : [];
+
+    for (const event of events) {
+      const key = event.receivedAt + "|" + event.kind + "|" + (event.message || "") + "|" + (event.url || "");
+      if (serverDiagnosticSeen.has(key)) continue;
+      serverDiagnosticSeen.add(key);
+      diagnosticEvents.push({
+        time: event.receivedAt || new Date().toISOString(),
+        type: event.kind || "SERVER_EVENT",
+        message: event.message || "",
+        server: true,
+        ...event
+      });
+    }
+
+    if (diagnosticEvents.length > 400) diagnosticEvents.splice(0, diagnosticEvents.length - 400);
+    renderDiagnosticPanel();
+  } catch {}
+}
+
+function startServerDiagnosticPolling() {
+  if (serverDiagnosticPoller) return;
+  pollServerDiagnostics();
+  serverDiagnosticPoller = setInterval(pollServerDiagnostics, 1500);
 }
 
 function shortUrl(value) {
@@ -775,3 +822,6 @@ document.querySelectorAll("[data-game]").forEach(card => {
 createTab();
 diagnosticLog("START", "Forknut diagnostic mode enabled");
 setStatus("Ready");
+
+ensureDiagnosticPanel();
+startServerDiagnosticPolling();
