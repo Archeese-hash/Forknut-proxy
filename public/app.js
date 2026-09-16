@@ -59,9 +59,11 @@ const gamesButton =
 
 
 function setStatus(text) {
+
   if (status) {
     status.textContent = text;
   }
+
 }
 
 
@@ -70,6 +72,7 @@ function setStatus(text) {
 /* -------------------------------- */
 
 function normalizeUrl(value) {
+
   const text =
     value.trim();
 
@@ -82,30 +85,31 @@ function normalizeUrl(value) {
   if (
     /^https?:\/\//i.test(text)
   ) {
-    return new URL(text).href;
+
+    return new URL(
+      text
+    ).href;
+
   }
 
-  /*
-   * Looks like a domain.
-   */
   if (
     /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/.*)?$/i.test(
       text
     )
   ) {
+
     return (
       "https://" +
       text
     );
+
   }
 
-  /*
-   * Otherwise search Google.
-   */
   return (
     "https://www.google.com/search?q=" +
     encodeURIComponent(text)
   );
+
 }
 
 
@@ -114,7 +118,9 @@ function normalizeUrl(value) {
 /* -------------------------------- */
 
 function getYouTubeVideoId(value) {
+
   try {
+
     const url =
       new URL(value);
 
@@ -124,13 +130,16 @@ function getYouTubeVideoId(value) {
         .replace(/^www\./, "")
         .replace(/^m\./, "");
 
+
     if (
       hostname === "youtube.com" ||
       hostname === "youtube-nocookie.com"
     ) {
 
       const videoId =
-        url.searchParams.get("v");
+        url.searchParams.get(
+          "v"
+        );
 
       if (
         videoId &&
@@ -138,8 +147,11 @@ function getYouTubeVideoId(value) {
           videoId
         )
       ) {
+
         return videoId;
+
       }
+
 
       const shorts =
         url.pathname.match(
@@ -150,6 +162,7 @@ function getYouTubeVideoId(value) {
         return shorts[1];
       }
 
+
       const embed =
         url.pathname.match(
           /^\/embed\/([A-Za-z0-9_-]{6,20})/
@@ -158,7 +171,9 @@ function getYouTubeVideoId(value) {
       if (embed) {
         return embed[1];
       }
+
     }
+
 
     if (
       hostname === "youtu.be"
@@ -175,18 +190,24 @@ function getYouTubeVideoId(value) {
           id
         )
       ) {
+
         return id;
+
       }
+
     }
 
   } catch (error) {
+
     console.error(
       "YouTube detection error:",
       error
     );
+
   }
 
   return null;
+
 }
 
 
@@ -199,10 +220,13 @@ async function registerServiceWorker() {
   if (
     !("serviceWorker" in navigator)
   ) {
+
     throw new Error(
       "This browser does not support service workers."
     );
+
   }
+
 
   const registration =
     await navigator.serviceWorker.register(
@@ -213,11 +237,15 @@ async function registerServiceWorker() {
       }
     );
 
+
   if (
     navigator.serviceWorker.controller
   ) {
+
     return navigator.serviceWorker.controller;
+
   }
+
 
   await new Promise(
     (resolve, reject) => {
@@ -225,14 +253,17 @@ async function registerServiceWorker() {
       const timeout =
         setTimeout(
           () => {
+
             reject(
               new Error(
                 "Forknut's service worker did not take control. Reload Forknut and try again."
               )
             );
+
           },
           15000
         );
+
 
       navigator.serviceWorker.addEventListener(
         "controllerchange",
@@ -253,10 +284,12 @@ async function registerServiceWorker() {
     }
   );
 
+
   return (
     navigator.serviceWorker.controller ||
     registration.active
   );
+
 }
 
 
@@ -270,12 +303,15 @@ async function getController() {
     return controller;
   }
 
+
   setStatus(
     "Starting Forknut..."
   );
 
+
   const serviceWorker =
     await registerServiceWorker();
+
 
   const wispUrl =
     (
@@ -287,49 +323,61 @@ async function getController() {
     location.host +
     "/wisp/";
 
-  let LibcurlClient;
+
+  let EpoxyClient;
+
 
   try {
 
-    const libcurl =
+    const epoxy =
       await import(
-        "/libcurl/index.mjs"
+        "/epoxy/index.mjs"
       );
 
-    LibcurlClient =
-      libcurl.default;
+    EpoxyClient =
+      epoxy.EpoxyClient ||
+      epoxy.default;
 
   } catch (error) {
 
     console.error(
-      "Libcurl loading error:",
+      "Epoxy loading error:",
       error
     );
 
     throw new Error(
-      "Forknut could not load its Libcurl transport."
+      "Forknut could not load its Epoxy transport."
     );
+
   }
+
 
   if (
-    typeof LibcurlClient !==
+    typeof EpoxyClient !==
     "function"
   ) {
+
     throw new Error(
-      "Forknut loaded an invalid Libcurl transport."
+      "Forknut loaded an invalid Epoxy transport."
     );
+
   }
 
+
   const transport =
-    new LibcurlClient({
-      wisp: wispUrl
+    new EpoxyClient({
+      wisp:
+        wispUrl
     });
 
+
   await transport.init();
+
 
   controller =
     new $scramjetController.Controller(
       {
+
         serviceworker:
           serviceWorker,
 
@@ -337,6 +385,7 @@ async function getController() {
           transport,
 
         config: {
+
           prefix:
             "/~/sj/",
 
@@ -348,55 +397,88 @@ async function getController() {
 
           injectPath:
             "/controller/controller.inject.js"
+
         }
+
       }
     );
 
+
   await controller.wait();
 
+
   return controller;
+
 }
 
 
 /* -------------------------------- */
-/* Create a new tab */
+/* Create tab */
 /* -------------------------------- */
 
 function createTab() {
 
   const tab = {
-    id: nextTabId++,
-    title: "New Tab",
-    url: "",
-    frame: null,
-    iframe: null,
-    youtubeFrame: null
+
+    id:
+      nextTabId++,
+
+    title:
+      "New Tab",
+
+    url:
+      "",
+
+    frame:
+      null,
+
+    iframe:
+      null,
+
+    youtubeFrame:
+      null
+
   };
 
-  tabs.push(tab);
+
+  tabs.push(
+    tab
+  );
+
 
   activeTabId =
     tab.id;
 
+
   renderTabs();
 
-  showTab(tab);
+  showTab(
+    tab
+  );
+
 
   setStatus(
     "Ready"
   );
 
+
   if (input) {
-    input.value = "";
+
+    input.value =
+      "";
+
     input.focus();
+
   }
 
+
   return tab;
+
 }
 
 
 /* -------------------------------- */
-/* Find active tab */
+/* Active tab */
 /* -------------------------------- */
 
 function getActiveTab() {
@@ -406,6 +488,7 @@ function getActiveTab() {
       tab.id ===
       activeTabId
   );
+
 }
 
 
@@ -419,32 +502,39 @@ function renderTabs() {
     return;
   }
 
-  tabsElement.innerHTML = "";
+
+  tabsElement.innerHTML =
+    "";
+
 
   for (
     const tab of tabs
   ) {
 
-    const element =
+    const tabButton =
       document.createElement(
-        "div"
+        "button"
       );
 
-    element.className =
-      "tab";
+    tabButton.className =
+      "browser-tab";
+
 
     if (
       tab.id ===
       activeTabId
     ) {
-      element.classList.add(
+
+      tabButton.classList.add(
         "active"
       );
+
     }
+
 
     const title =
       document.createElement(
-        "div"
+        "span"
       );
 
     title.className =
@@ -454,22 +544,18 @@ function renderTabs() {
       tab.title ||
       "New Tab";
 
+
     const close =
       document.createElement(
-        "button"
+        "span"
       );
 
     close.className =
       "tab-close";
 
-    close.type =
-      "button";
-
     close.textContent =
       "×";
 
-    close.title =
-      "Close tab";
 
     close.addEventListener(
       "click",
@@ -480,30 +566,38 @@ function renderTabs() {
         closeTab(
           tab.id
         );
+
       }
     );
 
-    element.appendChild(
+
+    tabButton.appendChild(
       title
     );
 
-    element.appendChild(
+    tabButton.appendChild(
       close
     );
 
-    element.addEventListener(
+
+    tabButton.addEventListener(
       "click",
       () => {
+
         switchTab(
           tab.id
         );
+
       }
     );
 
+
     tabsElement.appendChild(
-      element
+      tabButton
     );
+
   }
+
 }
 
 
@@ -516,24 +610,31 @@ function switchTab(id) {
   const tab =
     tabs.find(
       item =>
-        item.id === id
+        item.id ===
+        id
     );
 
   if (!tab) {
     return;
   }
 
+
   activeTabId =
     id;
 
+
   renderTabs();
 
-  showTab(tab);
+  showTab(
+    tab
+  );
+
 
   setStatus(
     tab.url ||
     "Ready"
   );
+
 }
 
 
@@ -547,6 +648,7 @@ function showTab(tab) {
     return;
   }
 
+
   shell.classList.add(
     "hidden"
   );
@@ -559,9 +661,6 @@ function showTab(tab) {
     "visible"
   );
 
-  /*
-   * Hide every iframe.
-   */
 
   for (
     const other of tabs
@@ -570,39 +669,44 @@ function showTab(tab) {
     if (
       other.iframe
     ) {
+
       other.iframe.style.display =
         "none";
+
     }
+
 
     if (
       other.youtubeFrame
     ) {
+
       other.youtubeFrame.style.display =
         "none";
+
     }
+
   }
 
-  /*
-   * Show normal proxy iframe.
-   */
 
   if (
     tab.iframe
   ) {
+
     tab.iframe.style.display =
       "block";
+
   }
 
-  /*
-   * Show YouTube iframe.
-   */
 
   if (
     tab.youtubeFrame
   ) {
+
     tab.youtubeFrame.style.display =
       "block";
+
   }
+
 }
 
 
@@ -615,42 +719,52 @@ function closeTab(id) {
   const index =
     tabs.findIndex(
       tab =>
-        tab.id === id
+        tab.id ===
+        id
     );
 
+
   if (
-    index === -1
+    index ===
+    -1
   ) {
+
     return;
+
   }
+
 
   const tab =
     tabs[index];
 
+
   if (
     tab.iframe
   ) {
+
     tab.iframe.remove();
+
   }
+
 
   if (
     tab.youtubeFrame
   ) {
+
     tab.youtubeFrame.remove();
+
   }
+
 
   tabs.splice(
     index,
     1
   );
 
-  /*
-   * If there are no tabs left,
-   * automatically create a new one.
-   */
 
   if (
-    tabs.length === 0
+    tabs.length ===
+    0
   ) {
 
     activeTabId =
@@ -671,15 +785,13 @@ function closeTab(id) {
     createTab();
 
     return;
+
   }
 
-  /*
-   * If the closed tab was active,
-   * switch to another tab.
-   */
 
   if (
-    activeTabId === id
+    activeTabId ===
+    id
   ) {
 
     const newIndex =
@@ -690,26 +802,32 @@ function closeTab(id) {
 
     activeTabId =
       tabs[newIndex].id;
+
   }
+
 
   renderTabs();
 
+
   const active =
     getActiveTab();
+
 
   showTab(
     active
   );
 
+
   setStatus(
     active?.url ||
     "Ready"
   );
+
 }
 
 
 /* -------------------------------- */
-/* Create YouTube player */
+/* YouTube player */
 /* -------------------------------- */
 
 function showYouTubePlayer(
@@ -720,13 +838,17 @@ function showYouTubePlayer(
   if (
     tab.youtubeFrame
   ) {
+
     tab.youtubeFrame.remove();
+
   }
+
 
   const iframe =
     document.createElement(
       "iframe"
     );
+
 
   iframe.className =
     "youtube-frame";
@@ -734,31 +856,41 @@ function showYouTubePlayer(
   iframe.title =
     "YouTube video";
 
+
   iframe.allow =
     "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
 
+
   iframe.allowFullscreen =
     true;
+
 
   iframe.setAttribute(
     "referrerpolicy",
     "strict-origin-when-cross-origin"
   );
 
+
   iframe.src =
     "https://www.youtube.com/embed/" +
-    encodeURIComponent(videoId) +
+    encodeURIComponent(
+      videoId
+    ) +
     "?playsinline=1&rel=0&controls=1";
+
 
   browser.appendChild(
     iframe
   );
 
+
   tab.youtubeFrame =
     iframe;
 
+
   tab.title =
     "YouTube";
+
 
   renderTabs();
 
@@ -766,14 +898,16 @@ function showYouTubePlayer(
     tab
   );
 
+
   setStatus(
     "YouTube video"
   );
+
 }
 
 
 /* -------------------------------- */
-/* Create Scramjet iframe */
+/* Scramjet iframe */
 /* -------------------------------- */
 
 async function createProxyFrame(
@@ -783,50 +917,61 @@ async function createProxyFrame(
   const sj =
     await getController();
 
+
   const iframe =
     document.createElement(
       "iframe"
     );
 
+
   iframe.className =
     "proxy-frame";
+
 
   iframe.setAttribute(
     "allow",
     "fullscreen; autoplay; gamepad; picture-in-picture; encrypted-media"
   );
 
+
   iframe.setAttribute(
     "allowfullscreen",
     ""
   );
+
 
   iframe.setAttribute(
     "referrerpolicy",
     "no-referrer"
   );
 
+
   iframe.setAttribute(
     "loading",
     "eager"
   );
+
 
   iframe.setAttribute(
     "title",
     "Forknut Proxy"
   );
 
+
   browser.appendChild(
     iframe
   );
 
+
   tab.iframe =
     iframe;
+
 
   tab.frame =
     sj.createFrame(
       iframe,
       {
+
         plugins: [
 
           new $scramjetUtils.HttpCachePlugin(),
@@ -834,31 +979,27 @@ async function createProxyFrame(
           new $scramjetUtils.UrlWatcherPlugin(
             currentUrl => {
 
-              /*
-               * Ignore updates for tabs that
-               * are no longer active.
-               */
-
               if (
                 tab.id !==
                 activeTabId
               ) {
+
                 return;
+
               }
+
 
               console.log(
                 "[Forknut] URL:",
                 currentUrl
               );
 
-              /*
-               * Detect YouTube links.
-               */
 
               const videoId =
                 getYouTubeVideoId(
                   currentUrl
                 );
+
 
               if (
                 videoId
@@ -870,14 +1011,13 @@ async function createProxyFrame(
                 );
 
                 return;
+
               }
+
 
               tab.url =
                 currentUrl;
 
-              /*
-               * Use hostname as the tab name.
-               */
 
               try {
 
@@ -885,6 +1025,7 @@ async function createProxyFrame(
                   new URL(
                     currentUrl
                   );
+
 
                 tab.title =
                   url.hostname
@@ -894,17 +1035,23 @@ async function createProxyFrame(
                     );
 
               } catch {
+
                 tab.title =
                   "Forknut";
+
               }
 
+
               renderTabs();
+
 
               setStatus(
                 currentUrl
               );
+
             }
           ),
+
 
           new $scramjetUtils.CatchEscapedLinksPlugin(
             () =>
@@ -914,10 +1061,13 @@ async function createProxyFrame(
           )
 
         ]
+
       }
     );
 
+
   return tab;
+
 }
 
 
@@ -932,9 +1082,11 @@ async function browse(
   const tab =
     getActiveTab();
 
+
   if (!tab) {
     return;
   }
+
 
   try {
 
@@ -942,15 +1094,12 @@ async function browse(
       "Loading..."
     );
 
-    /*
-     * YouTube directly entered
-     * into the address/search bar.
-     */
 
     const videoId =
       getYouTubeVideoId(
         url
       );
+
 
     if (
       videoId
@@ -959,18 +1108,16 @@ async function browse(
       tab.url =
         url;
 
+
       showYouTubePlayer(
         tab,
         videoId
       );
 
       return;
+
     }
 
-    /*
-     * Remove old YouTube player
-     * if this tab had one.
-     */
 
     if (
       tab.youtubeFrame
@@ -980,58 +1127,61 @@ async function browse(
 
       tab.youtubeFrame =
         null;
+
     }
 
-    /*
-     * Create the Scramjet frame
-     * only once for this tab.
-     */
 
     if (
       !tab.frame
     ) {
+
       await createProxyFrame(
         tab
       );
+
     }
+
 
     tab.url =
       url;
 
-    tab.title =
-      (() => {
 
-        try {
+    try {
 
-          return new URL(
-            url
-          ).hostname.replace(
-            /^www\./,
-            ""
-          );
+      tab.title =
+        new URL(
+          url
+        ).hostname.replace(
+          /^www\./,
+          ""
+        );
 
-        } catch {
+    } catch {
 
-          return "Loading...";
+      tab.title =
+        "Loading...";
 
-        }
+    }
 
-      })();
 
     renderTabs();
+
 
     showTab(
       tab
     );
+
 
     setStatus(
       "Loading " +
       url
     );
 
+
     tab.frame.go(
       url
     );
+
 
   } catch (error) {
 
@@ -1040,16 +1190,19 @@ async function browse(
       error
     );
 
+
     setStatus(
       error?.message ||
       "Forknut could not load this website."
     );
+
   }
+
 }
 
 
 /* -------------------------------- */
-/* New tab button */
+/* New tab */
 /* -------------------------------- */
 
 if (
@@ -1064,11 +1217,12 @@ if (
 
     }
   );
+
 }
 
 
 /* -------------------------------- */
-/* Search/address bar */
+/* Search bar */
 /* -------------------------------- */
 
 if (
@@ -1081,12 +1235,14 @@ if (
 
       event.preventDefault();
 
+
       try {
 
         const url =
           normalizeUrl(
             input.value
           );
+
 
         await browse(
           url
@@ -1099,19 +1255,22 @@ if (
           error
         );
 
+
         setStatus(
           error?.message ||
           "Something went wrong."
         );
+
       }
 
     }
   );
+
 }
 
 
 /* -------------------------------- */
-/* Home button */
+/* Home */
 /* -------------------------------- */
 
 if (
@@ -1125,35 +1284,46 @@ if (
       const tab =
         getActiveTab();
 
+
       if (
         tab?.iframe
       ) {
+
         tab.iframe.style.display =
           "none";
+
       }
+
 
       if (
         tab?.youtubeFrame
       ) {
+
         tab.youtubeFrame.style.display =
           "none";
+
       }
+
 
       browser.classList.remove(
         "active"
       );
 
+
       shell.classList.remove(
         "hidden"
       );
+
 
       homeButton.classList.remove(
         "visible"
       );
 
+
       setStatus(
         "Ready"
       );
+
 
       if (input) {
         input.focus();
@@ -1161,11 +1331,12 @@ if (
 
     }
   );
+
 }
 
 
 /* -------------------------------- */
-/* Pointercrate button */
+/* Pointercrate */
 /* -------------------------------- */
 
 if (
@@ -1179,23 +1350,24 @@ if (
       const tab =
         getActiveTab();
 
+
       if (!tab) {
         return;
       }
 
-      const url =
-        "https://pointercrate.com/demonlist/";
 
       await browse(
-        url
+        "https://pointercrate.com/demonlist/"
       );
+
     }
   );
+
 }
 
 
 /* -------------------------------- */
-/* Games button */
+/* Games */
 /* -------------------------------- */
 
 if (
@@ -1211,17 +1383,21 @@ if (
           "gamesSection"
         );
 
+
       if (
         section
       ) {
 
         section.scrollIntoView({
-          behavior: "smooth"
+          behavior:
+            "smooth"
         });
 
       }
+
     }
   );
+
 }
 
 
@@ -1243,6 +1419,7 @@ document
           const url =
             card.dataset.game;
 
+
           await browse(
             url
           );
@@ -1255,12 +1432,8 @@ document
 
 
 /* -------------------------------- */
-/* Start Forknut */
+/* Start */
 /* -------------------------------- */
-
-/*
- * Start with one empty tab.
- */
 
 createTab();
 
