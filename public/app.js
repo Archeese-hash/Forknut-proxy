@@ -260,6 +260,59 @@ async function probeImageUrl(url, frameUrl) {
   }
 }
 
+function extractOriginalUrl(scramjetUrl) {
+  const value = String(scramjetUrl || "");
+  const marker = value.match(/(?:^|\/)((?:https?|ftp)%3A%2F%2F.+)$/i);
+  if (!marker) return "";
+  try {
+    return decodeURIComponent(marker[1]);
+  } catch {
+    return "";
+  }
+}
+
+async function fallbackImageThroughServer(img, frameUrl) {
+  if (!img || img.dataset.forknutFallback === "1") return;
+
+  const current = img.currentSrc || img.src || "";
+  const original = extractOriginalUrl(current);
+  if (!original || !/^https?:\/\//i.test(original)) {
+    diagnosticLog("IMG_FALLBACK_SKIP", "could not extract original URL", {
+      src: shortUrl(current),
+      frame: shortUrl(frameUrl || "")
+    });
+    return;
+  }
+
+  img.dataset.forknutFallback = "1";
+  const fallbackUrl = "/__forknut/image?url=" + encodeURIComponent(original);
+
+  diagnosticLog("IMG_FALLBACK", "rewriting failed image through server", {
+    original: shortUrl(original),
+    fallback: shortUrl(fallbackUrl),
+    frame: shortUrl(frameUrl || "")
+  });
+
+  img.addEventListener("load", () => {
+    diagnosticLog("IMG_FALLBACK_OK", "server image fallback loaded", {
+      original: shortUrl(original),
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight
+    });
+  }, { once: true });
+
+  img.addEventListener("error", () => {
+    diagnosticLog("IMG_FALLBACK_FAIL", "server image fallback also failed", {
+      original: shortUrl(original),
+      fallback: shortUrl(fallbackUrl),
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight
+    });
+  }, { once: true });
+
+  img.src = fallbackUrl;
+}
+
 function watchImage(img, frameUrl) {
   if (!img || img.dataset.forknutDiag === "1") return;
   img.dataset.forknutDiag = "1";
@@ -287,6 +340,7 @@ function watchImage(img, frameUrl) {
       frame: shortUrl(frameUrl || "")
     });
     probeImageUrl(src(), frameUrl);
+    fallbackImageThroughServer(img, frameUrl);
   });
 
   if (img.complete) {
@@ -304,6 +358,7 @@ function watchImage(img, frameUrl) {
         naturalHeight: img.naturalHeight
       });
       probeImageUrl(src(), frameUrl);
+      fallbackImageThroughServer(img, frameUrl);
     }
   }
 }
