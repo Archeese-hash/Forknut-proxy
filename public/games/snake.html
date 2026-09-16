@@ -2,140 +2,240 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Forknut Pong</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forknut Snake</title>
+
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#111;color:white;font-family:Arial;text-align:center}
-h1{margin:15px 0 5px}
-#score{font-size:20px;margin:8px}
-canvas{background:#000;border:3px solid white;max-width:94vw;width:500px;height:350px;touch-action:none}
-button{padding:12px 22px;margin:12px;font-size:18px;border:0;border-radius:10px}
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    h1 {
+        margin: 15px 0 5px;
+    }
+
+    #score {
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+
+    canvas {
+        background: #222;
+        border: 3px solid #fff;
+        max-width: 90vw;
+        max-height: 65vh;
+        width: 400px;
+        height: 400px;
+        touch-action: none;
+    }
+
+    .controls {
+        margin-top: 15px;
+    }
+
+    button {
+        font-size: 22px;
+        padding: 12px 20px;
+        margin: 4px;
+        border: 0;
+        border-radius: 10px;
+        background: #333;
+        color: white;
+    }
+
+    #restart {
+        font-size: 18px;
+    }
 </style>
 </head>
+
 <body>
 
-<h1>🏓 Forknut Pong</h1>
-<div id="score">You: 0 | CPU: 0</div>
-<canvas id="game" width="500" height="350"></canvas>
-<br>
-<button onclick="restart()">Restart</button>
+<h1>🐍 Snake</h1>
+<div id="score">Score: 0</div>
+
+<canvas id="game" width="400" height="400"></canvas>
+
+<div class="controls">
+    <div>
+        <button onclick="changeDirection('up')">⬆️</button>
+    </div>
+    <div>
+        <button onclick="changeDirection('left')">⬅️</button>
+        <button onclick="changeDirection('down')">⬇️</button>
+        <button onclick="changeDirection('right')">➡️</button>
+    </div>
+
+    <button id="restart" onclick="restart()">Restart</button>
+</div>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-let player,cpu,ball,playerScore,cpuScore,timer;
+const size = 20;
+const cells = 20;
 
-function restart(){
- player={x:15,y:140,w:12,h:70};
- cpu={x:473,y:140,w:12,h:70};
- ball={x:250,y:175,vx:4,vy:3};
- playerScore=0;
- cpuScore=0;
- clearInterval(timer);
- timer=setInterval(loop,20);
- draw();
- updateScore();
+let snake;
+let food;
+let direction;
+let nextDirection;
+let score;
+let gameOver;
+let timer;
+
+function restart() {
+    snake = [
+        {x: 10, y: 10},
+        {x: 9, y: 10},
+        {x: 8, y: 10}
+    ];
+
+    direction = "right";
+    nextDirection = "right";
+    score = 0;
+    gameOver = false;
+
+    placeFood();
+
+    document.getElementById("score").textContent = "Score: 0";
+
+    clearInterval(timer);
+    timer = setInterval(gameLoop, 120);
+
+    draw();
 }
 
-function updateScore(){
- document.getElementById("score").textContent=
- "You: "+playerScore+" | CPU: "+cpuScore;
+function placeFood() {
+    do {
+        food = {
+            x: Math.floor(Math.random() * cells),
+            y: Math.floor(Math.random() * cells)
+        };
+    } while (
+        snake.some(part => part.x === food.x && part.y === food.y)
+    );
 }
 
-function movePlayer(y){
- player.y=y-player.h/2;
- if(player.y<0)player.y=0;
- if(player.y>canvas.height-player.h)
-   player.y=canvas.height-player.h;
+function changeDirection(newDirection) {
+    if (
+        (direction === "up" && newDirection === "down") ||
+        (direction === "down" && newDirection === "up") ||
+        (direction === "left" && newDirection === "right") ||
+        (direction === "right" && newDirection === "left")
+    ) {
+        return;
+    }
+
+    nextDirection = newDirection;
 }
 
-canvas.addEventListener("touchmove",e=>{
- e.preventDefault();
- const rect=canvas.getBoundingClientRect();
- const y=(e.touches[0].clientY-rect.top)*(canvas.height/rect.height);
- movePlayer(y);
+document.addEventListener("keydown", event => {
+    if (event.key === "ArrowUp") changeDirection("up");
+    if (event.key === "ArrowDown") changeDirection("down");
+    if (event.key === "ArrowLeft") changeDirection("left");
+    if (event.key === "ArrowRight") changeDirection("right");
 });
 
-canvas.addEventListener("mousemove",e=>{
- const rect=canvas.getBoundingClientRect();
- const y=(e.clientY-rect.top)*(canvas.height/rect.height);
- movePlayer(y);
-});
+function gameLoop() {
+    if (gameOver) return;
 
-function resetBall(){
- ball.x=250;
- ball.y=175;
- ball.vx=ball.vx>0?-4:4;
- ball.vy=(Math.random()*4)-2;
+    direction = nextDirection;
+
+    const head = {...snake[0]};
+
+    if (direction === "up") head.y--;
+    if (direction === "down") head.y++;
+    if (direction === "left") head.x--;
+    if (direction === "right") head.x++;
+
+    if (
+        head.x < 0 ||
+        head.x >= cells ||
+        head.y < 0 ||
+        head.y >= cells ||
+        snake.some(part => part.x === head.x && part.y === head.y)
+    ) {
+        endGame();
+        return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        document.getElementById("score").textContent =
+            "Score: " + score;
+        placeFood();
+    } else {
+        snake.pop();
+    }
+
+    draw();
 }
 
-function loop(){
- ball.x+=ball.vx;
- ball.y+=ball.vy;
+function draw() {
+    ctx.fillStyle = "#222";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
- if(ball.y<0||ball.y>canvas.height){
-   ball.vy*=-1;
- }
+    ctx.fillStyle = "#4caf50";
 
- cpu.y+=(ball.y-(cpu.y+cpu.h/2))*0.07;
+    snake.forEach(part => {
+        ctx.fillRect(
+            part.x * size,
+            part.y * size,
+            size - 1,
+            size - 1
+        );
+    });
 
- if(
-   ball.x<player.x+player.w &&
-   ball.x>player.x &&
-   ball.y>player.y &&
-   ball.y<player.y+player.h
- ){
-   ball.vx=Math.abs(ball.vx);
- }
+    ctx.fillStyle = "#f44336";
 
- if(
-   ball.x>cpu.x &&
-   ball.x<cpu.x+cpu.w &&
-   ball.y>cpu.y &&
-   ball.y<cpu.y+cpu.h
- ){
-   ball.vx=-Math.abs(ball.vx);
- }
-
- if(ball.x<0){
-   cpuScore++;
-   updateScore();
-   resetBall();
- }
-
- if(ball.x>canvas.width){
-   playerScore++;
-   updateScore();
-   resetBall();
- }
-
- draw();
+    ctx.fillRect(
+        food.x * size,
+        food.y * size,
+        size - 1,
+        size - 1
+    );
 }
 
-function draw(){
- ctx.fillStyle="#000";
- ctx.fillRect(0,0,500,350);
+function endGame() {
+    gameOver = true;
+    clearInterval(timer);
 
- ctx.strokeStyle="#555";
- ctx.setLineDash([8,8]);
- ctx.beginPath();
- ctx.moveTo(250,0);
- ctx.lineTo(250,350);
- ctx.stroke();
- ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(0,0,0,0.7)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
- ctx.fillStyle="white";
- ctx.fillRect(player.x,player.y,player.w,player.h);
- ctx.fillRect(cpu.x,cpu.y,cpu.w,cpu.h);
+    ctx.fillStyle = "white";
+    ctx.font = "32px Arial";
+    ctx.textAlign = "center";
 
- ctx.beginPath();
- ctx.arc(ball.x,ball.y,8,0,Math.PI*2);
- ctx.fill();
+    ctx.fillText(
+        "Game Over!",
+        canvas.width / 2,
+        canvas.height / 2
+    );
+
+    ctx.font = "20px Arial";
+
+    ctx.fillText(
+        "Score: " + score,
+        canvas.width / 2,
+        canvas.height / 2 + 35
+    );
 }
 
 restart();
 </script>
+
 </body>
 </html>
