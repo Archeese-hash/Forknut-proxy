@@ -13,6 +13,8 @@ let controller = null;
 let nextTabId = 1;
 let activeTabId = null;
 const tabs = [];
+let gameFrame = null;
+let gamesOpen = false;
 
 function setStatus(text) {
   if (status) status.textContent = text;
@@ -166,7 +168,9 @@ function createTab() {
   tabs.push(tab);
   activeTabId = tab.id;
   renderTabs();
-  showTab(tab);
+  shell.classList.remove("hidden");
+  browser.classList.remove("active");
+  if (homeButton) homeButton.classList.remove("visible");
   setStatus("Ready");
 
   if (input) {
@@ -224,9 +228,18 @@ function switchTab(id) {
 function showTab(tab) {
   if (!browser) return;
 
+  const gamesPanel = document.getElementById("gamesPanel");
+  if (gamesPanel) gamesPanel.classList.remove("active");
+  gamesOpen = false;
+  if (!tab?.url && !tab?.iframe && !tab?.youtubeFrame) {
+    shell.classList.remove("hidden");
+    browser.classList.remove("active");
+    if (homeButton) homeButton.classList.remove("visible");
+    return;
+  }
   shell.classList.add("hidden");
   browser.classList.add("active");
-  homeButton.classList.add("visible");
+  if (homeButton) homeButton.classList.add("visible");
 
   for (const other of tabs) {
     if (other.iframe) other.iframe.style.display = "none";
@@ -243,6 +256,7 @@ function closeTab(id) {
 
   const tab = tabs[index];
   if (tab.imageObserver) tab.imageObserver.disconnect();
+  if (tab.mediaObserver) tab.mediaObserver.disconnect();
   if (tab.iframe) tab.iframe.remove();
   if (tab.youtubeFrame) tab.youtubeFrame.remove();
 
@@ -251,6 +265,9 @@ function closeTab(id) {
   if (tabs.length === 0) {
     activeTabId = null;
     browser.classList.remove("active");
+    const gamesPanel = document.getElementById("gamesPanel");
+    if (gamesPanel) gamesPanel.classList.remove("active");
+    gamesOpen = false;
     shell.classList.remove("hidden");
     homeButton.classList.remove("visible");
     createTab();
@@ -405,6 +422,133 @@ function installImageFallback(tab) {
   } catch {}
 }
 
+
+function youtubeThumbEndpoint(id) {
+  return new URL("/__forknut/youtube-thumb/" + encodeURIComponent(id), window.location.origin).href;
+}
+
+function youtubeIdFromImage(value) {
+  const text = String(value || "");
+  const match = text.match(/(?:i\.)?ytimg\.com\/(?:vi|vi_webp)\/([A-Za-z0-9_-]{6,20})/i);
+  return match ? match[1] : null;
+}
+
+function rewriteMediaImage(img) {
+  if (!img || img.dataset.forknutMediaFixed === "1") return;
+  const current = img.getAttribute("src") || img.currentSrc || img.src || "";
+  if (!current || current.startsWith("data:") || current.startsWith("blob:") || current.startsWith("/__/")) return;
+
+  const ytId = youtubeIdFromImage(current);
+  if (ytId) {
+    img.dataset.forknutMediaFixed = "1";
+    img.src = youtubeThumbEndpoint(ytId);
+    return;
+  }
+
+  const original = extractOriginalUrl(current);
+  if (original && /^https?:\/\//i.test(original)) {
+    img.dataset.forknutMediaFixed = "1";
+    img.src = forknetImageEndpoint(original);
+  }
+}
+
+function rewriteBackgroundMedia(element) {
+  if (!element || element.dataset.forknutBgFixed === "1") return;
+  const style = element.getAttribute("style") || "";
+  if (!style.includes("url(")) return;
+  const match = style.match(/url\((?:"|')?([^"')]+)(?:"|')?\)/i);
+  if (!match) return;
+  const raw = match[1];
+  const ytId = youtubeIdFromImage(raw);
+  let replacement = "";
+  if (ytId) replacement = youtubeThumbEndpoint(ytId);
+  else {
+    const original = extractOriginalUrl(raw);
+    if (original) replacement = forknetImageEndpoint(original);
+  }
+  if (!replacement) return;
+  element.dataset.forknutBgFixed = "1";
+  element.style.backgroundImage = `url("${replacement.replace(/"/g, '%22')}")`;
+}
+
+function installMediaFix(tab) {
+  const iframe = tab?.iframe;
+  if (!iframe) return;
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    doc.querySelectorAll("img").forEach(rewriteMediaImage);
+    doc.querySelectorAll("[style*='url(']").forEach(rewriteBackgroundMedia);
+    if (!tab.mediaObserver) {
+      tab.mediaObserver = new MutationObserver(mutations => {
+        for (const mutation of mutations) {
+          if (mutation.type === "attributes" && mutation.target) {
+            if (mutation.attributeName === "src") rewriteMediaImage(mutation.target);
+            if (mutation.attributeName === "style") rewriteBackgroundMedia(mutation.target);
+          }
+          for (const node of mutation.addedNodes) {
+            if (node.nodeType !== 1) continue;
+            if (node.matches?.("img")) rewriteMediaImage(node);
+            if (node.matches?.("[style*='url(']")) rewriteBackgroundMedia(node);
+            node.querySelectorAll?.("img").forEach(rewriteMediaImage);
+            node.querySelectorAll?.("[style*='url(']").forEach(rewriteBackgroundMedia);
+          }
+        }
+      });
+      tab.mediaObserver.observe(doc.documentElement || doc, { childList: true, subtree: true, attributes: true, attributeFilter: ["src", "style"] });
+    }
+  } catch (error) {
+    console.debug("[Forknut] Media fix unavailable:", error);
+  }
+}
+
+function openLocalGame(path, title) {
+  const gamesPanel = document.getElementById("gamesPanel");
+  const gameHub = document.getElementById("gameHub");
+  if (!gamesPanel || !gameHub) return;
+
+  gamesOpen = true;
+  shell.classList.add("hidden");
+  browser.classList.remove("active");
+  if (homeButton) homeButton.classList.add("visible");
+  gamesPanel.classList.add("active");
+
+  gameHub.innerHTML = `
+    <div class="game-view-head">
+      <button type="button" id="backToGames" class="game-back">â Games</button>
+      <strong>${title}</strong>
+    </div>
+    <iframe class="local-game-frame" src="${path}" title="${title}" allow="fullscreen; gamepad; autoplay"></iframe>
+  `;
+  gameFrame = gameHub.querySelector("iframe");
+  gameHub.querySelector("#backToGames").addEventListener("click", showGamesHub);
+  setStatus(title);
+}
+
+function showGamesHub() {
+  const gamesPanel = document.getElementById("gamesPanel");
+  const gameHub = document.getElementById("gameHub");
+  if (!gamesPanel || !gameHub) return;
+  gamesOpen = true;
+  shell.classList.add("hidden");
+  browser.classList.remove("active");
+  if (homeButton) homeButton.classList.add("visible");
+  gamesPanel.classList.add("active");
+  gameHub.innerHTML = `
+    <div class="games-heading"><span>ð®</span><div><h2>Games</h2><p>Playable on iPad â no external game site required.</p></div></div>
+    <div class="game-grid">
+      <button class="game-card" data-local-game="/games/snake.html" data-game-title="Snake"><span>ð</span><strong>Snake</strong><small>Classic touch controls</small></button>
+      <button class="game-card" data-local-game="/games/2048.html" data-game-title="2048"><span>ð¢</span><strong>2048</strong><small>Swipe to combine tiles</small></button>
+      <button class="game-card" data-local-game="/games/flappy.html" data-game-title="Flappy Fork"><span>ð¤</span><strong>Flappy Fork</strong><small>Tap to fly</small></button>
+      <button class="game-card" data-local-game="/games/pong.html" data-game-title="Pong"><span>ð</span><strong>Pong</strong><small>Touch / drag paddle</small></button>
+    </div>
+  `;
+  gameHub.querySelectorAll("[data-local-game]").forEach(card => {
+    card.addEventListener("click", () => openLocalGame(card.dataset.localGame, card.dataset.gameTitle));
+  });
+  setStatus("Games");
+}
+
 async function createProxyFrame(tab) {
   const sj = await getController();
 
@@ -423,6 +567,9 @@ async function createProxyFrame(tab) {
     setTimeout(() => installImageFallback(tab), 50);
     setTimeout(() => installImageFallback(tab), 500);
     setTimeout(() => installImageFallback(tab), 2000);
+    setTimeout(() => installMediaFix(tab), 100);
+    setTimeout(() => installMediaFix(tab), 1000);
+    setTimeout(() => installMediaFix(tab), 3000);
   });
 
   tab.frame = sj.createFrame(iframe, {
@@ -520,6 +667,9 @@ if (homeButton) {
     if (tab?.youtubeFrame) tab.youtubeFrame.style.display = "none";
 
     browser.classList.remove("active");
+    const gamesPanel = document.getElementById("gamesPanel");
+    if (gamesPanel) gamesPanel.classList.remove("active");
+    gamesOpen = false;
     shell.classList.remove("hidden");
     homeButton.classList.remove("visible");
     setStatus("Ready");
@@ -537,14 +687,17 @@ if (pointercrateButton) {
 
 if (gamesButton) {
   gamesButton.addEventListener("click", () => {
-    const section = document.getElementById("gamesSection");
-    if (section) section.scrollIntoView({ behavior: "smooth" });
+    showGamesHub();
   });
 }
 
-document.querySelectorAll("[data-game]").forEach(card => {
-  card.addEventListener("click", async () => {
-    await browse(card.dataset.game);
+// Local games are intentionally not sent through Scramjet. They are bundled
+// with Forknut so they render and remain playable on iPad even when a remote
+// game host blocks framing or its assets.
+
+document.querySelectorAll("[data-local-game]").forEach(card => {
+  card.addEventListener("click", () => {
+    openLocalGame(card.dataset.localGame, card.dataset.gameTitle || "Game");
   });
 });
 
