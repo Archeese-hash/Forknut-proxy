@@ -5,7 +5,12 @@
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#050509"
   >
 
   <title>Forknut Proxy</title>
@@ -17,25 +22,28 @@
 
     html,
     body {
-      margin: 0;
       width: 100%;
       height: 100%;
-      overflow: hidden;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #09070d;
-      color: white;
+      margin: 0;
+      padding: 0;
     }
 
     body {
-      display: flex;
-      flex-direction: column;
+      overflow: hidden;
+      background: #050509;
+      color: white;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
     }
 
     /* =========================
-       MOVING BUBBLE BACKGROUND
+       MOVING BACKGROUND
        ========================= */
 
-    #bubbleBackground {
+    .background {
       position: fixed;
       inset: 0;
       overflow: hidden;
@@ -44,255 +52,252 @@
       background:
         radial-gradient(
           circle at 50% 20%,
-          #241631 0%,
-          #100b16 45%,
-          #09070d 100%
+          #171727 0%,
+          #09090f 45%,
+          #050509 100%
         );
     }
 
     .bubble {
       position: absolute;
       border-radius: 50%;
-      pointer-events: none;
-      opacity: 0.25;
-
-      background:
-        radial-gradient(
-          circle at 30% 25%,
-          rgba(255,255,255,0.22),
-          rgba(150,80,220,0.18) 25%,
-          rgba(100,40,170,0.08) 55%,
-          rgba(60,20,100,0) 75%
-        );
-
+      background: rgba(255, 255, 255, 0.035);
       filter: blur(1px);
-
-      box-shadow:
-        inset -15px -20px 35px rgba(40, 10, 70, 0.25),
-        inset 10px 10px 25px rgba(255,255,255,0.04),
-        0 0 35px rgba(140,70,220,0.08);
+      animation:
+        floatBubble 18s infinite ease-in-out;
     }
 
-    .bubble1 {
+    .bubble:nth-child(1) {
       width: 180px;
       height: 180px;
       left: 5%;
-      top: 65%;
-      animation:
-        floatOne 18s ease-in-out infinite;
+      top: 20%;
+      animation-delay: -2s;
     }
 
-    .bubble2 {
+    .bubble:nth-child(2) {
       width: 260px;
       height: 260px;
-      left: 70%;
+      right: 5%;
       top: 10%;
-      animation:
-        floatTwo 24s ease-in-out infinite;
+      animation-delay: -7s;
     }
 
-    .bubble3 {
-      width: 120px;
-      height: 120px;
-      left: 45%;
-      top: 75%;
-      animation:
-        floatThree 15s ease-in-out infinite;
+    .bubble:nth-child(3) {
+      width: 140px;
+      height: 140px;
+      left: 35%;
+      bottom: 5%;
+      animation-delay: -12s;
     }
 
-    .bubble4 {
+    .bubble:nth-child(4) {
       width: 220px;
       height: 220px;
-      left: 78%;
-      top: 65%;
-      animation:
-        floatFour 21s ease-in-out infinite;
+      right: 25%;
+      bottom: 15%;
+      animation-delay: -4s;
     }
 
-    .bubble5 {
-      width: 90px;
-      height: 90px;
-      left: 25%;
-      top: 12%;
-      animation:
-        floatFive 13s ease-in-out infinite;
-    }
-
-    .bubble6 {
-      width: 150px;
-      height: 150px;
-      left: 55%;
-      top: 35%;
-      animation:
-        floatSix 19s ease-in-out infinite;
-    }
-
-    @keyframes floatOne {
-      0%, 100% {
-        transform:
-          translate3d(0, 0, 0)
-          scale(1);
-      }
-
-      25% {
-        transform:
-          translate3d(70px, -50px, 0)
-          scale(1.08);
+    @keyframes floatBubble {
+      0% {
+        transform: translate3d(0, 0, 0) scale(1);
       }
 
       50% {
-        transform:
-          translate3d(130px, 20px, 0)
-          scale(0.94);
+        transform: translate3d(
+          35px,
+          -45px,
+          0
+        ) scale(1.08);
       }
 
-      75% {
-        transform:
-          translate3d(40px, 80px, 0)
-          scale(1.04);
-      }
-    }
-
-    @keyframes floatTwo {
-      0%, 100% {
-        transform:
-          translate3d(0, 0, 0)
-          scale(1);
-      }
-
-      30% {
-        transform:
-          translate3d(-100px, 70px, 0)
-          scale(0.92);
-      }
-
-      60% {
-        transform:
-          translate3d(-40px, 140px, 0)
-          scale(1.08);
-      }
-
-      80% {
-        transform:
-          translate3d(80px, 60px, 0)
-          scale(0.97);
-      }
-    }
-
-    @keyframes floatThree {
-      0%, 100% {
-        transform:
-          translate3d(0, 0, 0)
-          scale(1);
-      }
-
-      50% {
-        transform:
-          translate3d(-90px, -120px, 0)
-          scale(1.15);
-      }
-    }
-
-    @keyframes floatFour {
-      0%, 100% {
-        transform:
-          translate3d(0, 0, 0)
-          scale(1);
-      }
-
-      25% {
-        transform:
-          translate3d(-80px, -30px, 0)
-          scale(1.05);
-      }
-
-      50% {
-        transform:
-          translate3d(-130px, -110px, 0)
-          scale(0.93);
-      }
-
-      75% {
-        transform:
-          translate3d(-40px, -170px, 0)
-          scale(1.08);
-      }
-    }
-
-    @keyframes floatFive {
-      0%, 100% {
-        transform:
-          translate3d(0, 0, 0);
-      }
-
-      50% {
-        transform:
-          translate3d(100px, 100px, 0);
-      }
-    }
-
-    @keyframes floatSix {
-      0%, 100% {
-        transform:
-          translate3d(0, 0, 0)
-          scale(1);
-      }
-
-      33% {
-        transform:
-          translate3d(90px, -70px, 0)
-          scale(1.1);
-      }
-
-      66% {
-        transform:
-          translate3d(-70px, 60px, 0)
-          scale(0.92);
+      100% {
+        transform: translate3d(0, 0, 0) scale(1);
       }
     }
 
     /* =========================
-       TAB BAR
+       APP
        ========================= */
 
-    #tabBar {
+    #app {
       position: relative;
-      z-index: 10;
+      z-index: 1;
 
-      height: 52px;
-      min-height: 52px;
+      width: 100%;
+      height: 100%;
 
+      display: flex;
+      flex-direction: column;
+
+      overflow: hidden;
+    }
+
+    /* =========================
+       TOP BAR
+       ========================= */
+
+    .topbar {
+      flex: 0 0 auto;
+
+      width: 100%;
+
+      padding:
+        calc(10px + env(safe-area-inset-top))
+        12px
+        10px;
+
+      background: rgba(5, 5, 9, 0.88);
+
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+
+      border-bottom:
+        1px solid rgba(255, 255, 255, 0.08);
+
+      position: relative;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      margin-bottom: 9px;
+
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.4px;
+    }
+
+    .brand-dot {
+      width: 11px;
+      height: 11px;
+
+      border-radius: 50%;
+
+      background: white;
+
+      box-shadow:
+        0 0 12px rgba(255, 255, 255, 0.65);
+    }
+
+    .subtitle {
+      margin-left: 20px;
+
+      margin-top: -6px;
+      margin-bottom: 10px;
+
+      color: rgba(255, 255, 255, 0.45);
+
+      font-size: 11px;
+    }
+
+    /* =========================
+       SEARCH
+       ========================= */
+
+    .search {
+      display: flex;
+      width: 100%;
+      gap: 7px;
+    }
+
+    .search input {
+      min-width: 0;
+      flex: 1;
+
+      height: 42px;
+
+      border: 1px solid
+        rgba(255, 255, 255, 0.12);
+
+      border-radius: 13px;
+
+      outline: none;
+
+      background:
+        rgba(255, 255, 255, 0.07);
+
+      color: white;
+
+      padding:
+        0 13px;
+
+      font-size: 15px;
+
+      -webkit-appearance: none;
+    }
+
+    .search input::placeholder {
+      color:
+        rgba(255, 255, 255, 0.38);
+    }
+
+    .search input:focus {
+      border-color:
+        rgba(255, 255, 255, 0.28);
+
+      background:
+        rgba(255, 255, 255, 0.09);
+    }
+
+    .search button {
+      flex: 0 0 auto;
+
+      height: 42px;
+
+      padding:
+        0 16px;
+
+      border: 0;
+
+      border-radius: 13px;
+
+      background: white;
+
+      color: #050509;
+
+      font-size: 14px;
+      font-weight: 750;
+
+      cursor: pointer;
+
+      -webkit-tap-highlight-color:
+        transparent;
+    }
+
+    /* =========================
+       TABS
+       ========================= */
+
+    .tabs-row {
       display: flex;
       align-items: center;
 
       gap: 6px;
 
-      padding:
-        7px 8px;
-
-      background:
-        rgba(21, 18, 27, 0.88);
-
-      backdrop-filter:
-        blur(14px);
-
-      -webkit-backdrop-filter:
-        blur(14px);
-
-      border-bottom:
-        1px solid rgba(120, 90, 150, 0.25);
+      margin-top: 9px;
 
       overflow-x: auto;
       overflow-y: hidden;
+
+      scrollbar-width: none;
+
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs-row::-webkit-scrollbar {
+      display: none;
     }
 
     #tabs {
       display: flex;
       align-items: center;
 
-      gap: 5px;
-
-      height: 100%;
+      gap: 6px;
 
       min-width: 0;
 
@@ -300,121 +305,135 @@
 
       overflow-x: auto;
       overflow-y: hidden;
+
+      scrollbar-width: none;
+
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #tabs::-webkit-scrollbar {
+      display: none;
     }
 
     .tab {
-      height: 38px;
-
-      min-width: 145px;
-      max-width: 230px;
+      flex: 0 0 auto;
 
       display: flex;
       align-items: center;
 
-      gap: 8px;
+      min-width: 105px;
+      max-width: 190px;
+
+      height: 34px;
 
       padding:
-        0 8px 0 12px;
+        0 7px
+        0 12px;
+
+      gap: 8px;
 
       border-radius: 10px;
 
       background:
-        rgba(33, 28, 41, 0.9);
+        rgba(255, 255, 255, 0.045);
 
-      color: #aaa2b5;
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.07);
+
+      color:
+        rgba(255, 255, 255, 0.52);
 
       cursor: pointer;
 
-      user-select: none;
-
-      flex-shrink: 0;
-
-      border:
-        1px solid transparent;
+      -webkit-tap-highlight-color:
+        transparent;
     }
 
     .tab.active {
       background:
-        rgba(48, 38, 60, 0.95);
+        rgba(255, 255, 255, 0.11);
 
       color: white;
 
       border-color:
-        rgba(140, 90, 190, 0.3);
+        rgba(255, 255, 255, 0.15);
     }
 
     .tab-title {
-      flex: 1;
-
       min-width: 0;
+      flex: 1;
 
       overflow: hidden;
 
       white-space: nowrap;
-
       text-overflow: ellipsis;
 
-      font-size: 14px;
+      font-size: 12px;
+      font-weight: 650;
     }
 
     .tab-close {
-      width: 26px;
-      height: 26px;
+      width: 25px;
+      height: 25px;
+
+      padding: 0;
 
       border: 0;
+      border-radius: 7px;
 
-      border-radius: 6px;
+      background:
+        transparent;
 
-      background: transparent;
-
-      color: #aaa2b5;
+      color:
+        rgba(255, 255, 255, 0.48);
 
       font-size: 18px;
+      line-height: 25px;
 
       cursor: pointer;
     }
 
-    .tab-close:hover {
-      background: #453650;
+    .tab-close:active {
+      background:
+        rgba(255, 255, 255, 0.1);
+
       color: white;
     }
 
     #newTabButton {
-      width: 38px;
-      height: 38px;
+      flex: 0 0 auto;
 
-      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
 
-      border: 0;
+      border: 1px solid
+        rgba(255, 255, 255, 0.09);
 
-      border-radius: 9px;
+      border-radius: 10px;
 
       background:
-        rgba(48, 38, 60, 0.95);
+        rgba(255, 255, 255, 0.055);
 
       color: white;
 
-      font-size: 24px;
+      font-size: 21px;
 
       cursor: pointer;
     }
 
-    #newTabButton:hover {
-      background: #4d3b60;
-    }
-
     /* =========================
-       MAIN
+       CONTENT
        ========================= */
 
-    #main {
+    #content {
       position: relative;
 
-      z-index: 1;
-
-      flex: 1;
+      flex: 1 1 auto;
 
       min-height: 0;
+
+      overflow: hidden;
     }
 
     /* =========================
@@ -423,242 +442,169 @@
 
     #shell {
       position: absolute;
-
       inset: 0;
 
       overflow-y: auto;
+      overflow-x: hidden;
 
       padding:
-        30px 18px;
+        25px
+        16px
+        calc(35px + env(safe-area-inset-bottom));
 
-      background:
-        rgba(9, 7, 13, 0.28);
+      -webkit-overflow-scrolling: touch;
+
+      transition:
+        opacity 0.2s ease,
+        visibility 0.2s ease;
     }
 
     #shell.hidden {
-      display: none;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
 
-    .home {
-      max-width: 850px;
+    .hero {
+      width: min(700px, 100%);
 
       margin:
-        0 auto;
+        18px auto
+        28px;
 
       text-align: center;
     }
 
-    .logo {
-      font-size: 42px;
+    .hero h1 {
+      margin: 0 0 10px;
 
-      font-weight: 800;
+      font-size:
+        clamp(30px, 8vw, 48px);
 
-      margin-top: 35px;
-
-      margin-bottom: 5px;
-
-      text-shadow:
-        0 0 25px rgba(150,80,220,0.25);
+      letter-spacing: -1.5px;
     }
 
-    .subtitle {
-      color: #aaa0b5;
+    .hero p {
+      margin: 0 auto;
 
-      margin-bottom: 28px;
+      max-width: 540px;
+
+      color:
+        rgba(255, 255, 255, 0.52);
+
+      line-height: 1.55;
+
+      font-size: 14px;
     }
 
-    .search-box {
-      display: flex;
+    .quick-buttons {
+      display: grid;
 
-      gap: 8px;
-
-      max-width: 700px;
-
-      margin:
-        0 auto 25px;
-    }
-
-    #url {
-      flex: 1;
-
-      min-width: 0;
-
-      height: 48px;
-
-      border:
-        1px solid #40364c;
-
-      border-radius: 12px;
-
-      outline: none;
-
-      padding:
-        0 16px;
-
-      background:
-        rgba(23, 19, 29, 0.85);
-
-      backdrop-filter:
-        blur(10px);
-
-      color: white;
-
-      font-size: 16px;
-    }
-
-    #url:focus {
-      border-color: #8b5fc7;
-
-      box-shadow:
-        0 0 20px rgba(130,70,190,0.12);
-    }
-
-    #proxyForm button {
-      height: 48px;
-
-      padding:
-        0 20px;
-
-      border: 0;
-
-      border-radius: 12px;
-
-      background: #7545a8;
-
-      color: white;
-
-      font-weight: bold;
-
-      cursor: pointer;
-    }
-
-    #proxyForm button:hover {
-      background: #8c5cc0;
-    }
-
-    #status {
-      min-height: 20px;
-
-      color: #aaa0b5;
-
-      font-size: 13px;
-
-      margin-bottom: 25px;
-
-      overflow: hidden;
-
-      text-overflow: ellipsis;
-
-      white-space: nowrap;
-    }
-
-    /* =========================
-       BUTTONS
-       ========================= */
-
-    .side-buttons {
-      display: flex;
-
-      justify-content: center;
-
-      flex-wrap: wrap;
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
 
       gap: 10px;
 
-      margin-bottom: 28px;
+      width: min(700px, 100%);
+
+      margin:
+        0 auto
+        22px;
     }
 
-    .side-button {
-      border:
-        1px solid #40364c;
+    .quick-button {
+      min-height: 48px;
+
+      border: 1px solid
+        rgba(255, 255, 255, 0.09);
+
+      border-radius: 14px;
 
       background:
-        rgba(23, 19, 29, 0.8);
-
-      backdrop-filter:
-        blur(10px);
+        rgba(255, 255, 255, 0.055);
 
       color: white;
 
-      padding:
-        12px 18px;
-
-      border-radius: 10px;
+      font-weight: 700;
 
       cursor: pointer;
     }
 
-    .side-button:hover {
+    .quick-button:active {
+      transform: scale(0.98);
+
       background:
-        rgba(42, 32, 52, 0.95);
+        rgba(255, 255, 255, 0.11);
     }
 
-    /* =========================
-       GAMES
-       ========================= */
+    .games-title {
+      width: min(700px, 100%);
 
-    .section-title {
       margin:
-        25px 0 14px;
+        28px auto 12px;
 
-      font-size: 22px;
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    #gamesSection {
+      width: min(700px, 100%);
+
+      margin: 0 auto;
     }
 
     .games {
       display: grid;
 
       grid-template-columns:
-        repeat(
-          auto-fit,
-          minmax(150px, 1fr)
-        );
+        repeat(2, minmax(0, 1fr));
 
       gap: 10px;
     }
 
     .game-card {
+      min-height: 82px;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+
+      padding: 15px;
+
+      border-radius: 15px;
+
       border:
-        1px solid #30283b;
+        1px solid
+        rgba(255, 255, 255, 0.08);
 
       background:
-        rgba(21, 18, 27, 0.78);
-
-      backdrop-filter:
-        blur(10px);
-
-      color: white;
-
-      border-radius: 12px;
-
-      padding:
-        16px 10px;
+        rgba(255, 255, 255, 0.045);
 
       cursor: pointer;
 
-      font-size: 15px;
-
-      transition:
-        transform 0.2s ease,
-        background 0.2s ease;
+      -webkit-tap-highlight-color:
+        transparent;
     }
 
-    .game-card:hover {
+    .game-card:active {
+      transform: scale(0.98);
+
       background:
-        rgba(37, 29, 48, 0.95);
-
-      border-color:
-        #61477c;
-
-      transform:
-        translateY(-2px);
+        rgba(255, 255, 255, 0.09);
     }
 
-    .credit {
-      margin-top: 35px;
+    .game-name {
+      font-size: 15px;
+      font-weight: 800;
+    }
 
-      color: #716a78;
+    .game-url {
+      margin-top: 5px;
 
-      font-size: 13px;
+      color:
+        rgba(255, 255, 255, 0.38);
+
+      font-size: 11px;
     }
 
     /* =========================
@@ -672,25 +618,132 @@
 
       display: none;
 
-      background: #000;
+      overflow: hidden;
+
+      background: #fff;
+
+      /*
+       * Important:
+       * The iframe is isolated from the dark UI.
+       * This prevents the parent background from making
+       * transparent iframe areas look like black media.
+       */
+      isolation: isolate;
+
+      contain: strict;
+
+      transform: translateZ(0);
+      -webkit-transform: translateZ(0);
     }
 
     #browser.active {
       display: block;
     }
 
-    .proxy-frame,
+    /*
+     * Proxy iframe
+     *
+     * Do NOT use opacity.
+     * Do NOT use mix-blend-mode.
+     * Do NOT use filters.
+     * Do NOT use background transparency.
+     *
+     * These can cause compositing problems on iPad/Safari/WebKit.
+     */
+    .proxy-frame {
+      position: absolute;
+
+      inset: 0;
+
+      display: block;
+
+      width: 100%;
+      height: 100%;
+
+      min-width: 100%;
+      min-height: 100%;
+
+      border: 0;
+
+      margin: 0;
+      padding: 0;
+
+      background: white;
+
+      opacity: 1;
+
+      visibility: visible;
+
+      transform:
+        translate3d(0, 0, 0);
+
+      -webkit-transform:
+        translate3d(0, 0, 0);
+
+      backface-visibility: visible;
+      -webkit-backface-visibility: visible;
+
+      filter: none;
+
+      mix-blend-mode: normal;
+
+      color-scheme: light;
+
+      /*
+       * The iframe itself must be allowed to create
+       * a normal browser compositing layer.
+       */
+      will-change: auto;
+
+      z-index: 1;
+    }
+
+    /*
+     * YouTube frame
+     */
     .youtube-frame {
       position: absolute;
 
       inset: 0;
 
+      display: block;
+
       width: 100%;
       height: 100%;
 
+      min-width: 100%;
+      min-height: 100%;
+
       border: 0;
 
+      margin: 0;
+      padding: 0;
+
       background: #000;
+
+      opacity: 1;
+
+      visibility: visible;
+
+      transform:
+        translate3d(0, 0, 0);
+
+      -webkit-transform:
+        translate3d(0, 0, 0);
+
+      filter: none;
+
+      mix-blend-mode: normal;
+
+      z-index: 2;
+    }
+
+    /*
+     * This makes sure browser frames never accidentally
+     * inherit the app's dark visual effects.
+     */
+    #browser iframe {
+      color-scheme: light;
     }
 
     /* =========================
@@ -700,346 +753,383 @@
     #homeButton {
       position: absolute;
 
-      z-index: 100;
-
       left: 12px;
-      top: 12px;
+      bottom:
+        calc(12px + env(safe-area-inset-bottom));
 
-      width: 42px;
-      height: 42px;
-
-      border: 0;
-
-      border-radius: 10px;
-
-      background:
-        rgba(25, 20, 32, 0.92);
-
-      color: white;
-
-      font-size: 20px;
-
-      cursor: pointer;
+      z-index: 30;
 
       display: none;
 
-      backdrop-filter:
-        blur(10px);
+      height: 40px;
+
+      padding:
+        0 15px;
+
+      border: 1px solid
+        rgba(0, 0, 0, 0.15);
+
+      border-radius: 12px;
+
+      background:
+        rgba(255, 255, 255, 0.92);
+
+      color: #050509;
+
+      font-weight: 750;
+
+      box-shadow:
+        0 5px 20px
+        rgba(0, 0, 0, 0.2);
+
+      cursor: pointer;
+
+      -webkit-tap-highlight-color:
+        transparent;
     }
 
     #homeButton.visible {
       display: block;
     }
 
-    #homeButton:hover {
-      background: #49355b;
+    /* =========================
+       STATUS
+       ========================= */
+
+    #status {
+      position: fixed;
+
+      left: 50%;
+
+      bottom:
+        calc(6px + env(safe-area-inset-bottom));
+
+      transform:
+        translateX(-50%);
+
+      z-index: 100;
+
+      max-width: 72vw;
+
+      overflow: hidden;
+
+      white-space: nowrap;
+      text-overflow: ellipsis;
+
+      color:
+        rgba(255, 255, 255, 0.32);
+
+      font-size: 10px;
+
+      pointer-events: none;
     }
 
     /* =========================
-       MOBILE
+       IPAD / LARGE SCREENS
        ========================= */
 
-    @media (max-width: 600px) {
+    @media (min-width: 700px) {
 
-      .logo {
+      .topbar {
+        padding-left: 18px;
+        padding-right: 18px;
+      }
+
+      .search {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      .tabs-row {
+        max-width: 1000px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .subtitle {
+        text-align: center;
+        margin-left: 0;
+      }
+    }
+
+    /* =========================
+       SMALL SCREENS
+       ========================= */
+
+    @media (max-width: 430px) {
+
+      .quick-buttons {
+        grid-template-columns:
+          1fr 1fr;
+      }
+
+      .games {
+        grid-template-columns:
+          1fr 1fr;
+      }
+
+      .hero {
+        margin-top: 8px;
+      }
+
+      .hero h1 {
         font-size: 34px;
       }
-
-      .search-box {
-        flex-direction: column;
-      }
-
-      #proxyForm button {
-        width: 100%;
-      }
-
-      .tab {
-        min-width: 125px;
-      }
-
-      .bubble2 {
-        width: 190px;
-        height: 190px;
-      }
-
-      .bubble4 {
-        width: 160px;
-        height: 160px;
-      }
     }
 
-    /* Reduce movement for people who
-       have reduced-motion enabled. */
+    /*
+     * When the iPad keyboard opens, don't allow the app
+     * to accidentally scroll the whole document.
+     */
+    @supports (-webkit-touch-callout: none) {
 
-    @media (prefers-reduced-motion: reduce) {
-
-      .bubble {
-        animation: none !important;
-      }
-
-      .game-card {
-        transition: none;
+      input,
+      button {
+        -webkit-touch-callout: none;
       }
     }
-
   </style>
-
-  <script src="/scramjet/scramjet.js"></script>
-  <script src="/controller/controller.api.js"></script>
-  <script src="/utils/scramjet-utils.js"></script>
-
 </head>
 
 <body>
 
-  <!-- =========================
-       MOVING BACKGROUND
-       ========================= -->
-
-  <div id="bubbleBackground">
-
-    <div class="bubble bubble1"></div>
-
-    <div class="bubble bubble2"></div>
-
-    <div class="bubble bubble3"></div>
-
-    <div class="bubble bubble4"></div>
-
-    <div class="bubble bubble5"></div>
-
-    <div class="bubble bubble6"></div>
-
+  <div class="background">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
   </div>
 
+  <div id="app">
 
-  <!-- =========================
-       TABS
-       ========================= -->
+    <!-- =====================
+         TOP BAR
+         ===================== -->
 
-  <div id="tabBar">
+    <header class="topbar">
 
-    <div id="tabs"></div>
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>Forknut Proxy</span>
+      </div>
 
-    <button
-      id="newTabButton"
-      type="button"
-      title="New tab"
-    >
-      +
-    </button>
+      <div class="subtitle">
+        Made by Archie Faulkner
+      </div>
 
-  </div>
+      <form
+        id="proxyForm"
+        class="search"
+        autocomplete="off"
+      >
 
-
-  <div id="main">
-
-    <!-- =========================
-         HOME
-         ========================= -->
-
-    <section id="shell">
-
-      <div class="home">
-
-        <div class="logo">
-          Forknut
-        </div>
-
-        <div class="subtitle">
-          Forknut Proxy
-        </div>
-
-
-        <form
-          id="proxyForm"
-          class="search-box"
+        <input
+          id="url"
+          type="text"
+          inputmode="url"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="Enter a website or search..."
+          aria-label="Website or search"
         >
 
-          <input
-            id="url"
-            type="text"
-            autocomplete="off"
-            autocapitalize="none"
-            spellcheck="false"
-            placeholder="Enter a website or search"
-          >
+        <button
+          type="submit"
+        >
+          Go
+        </button>
 
-          <button type="submit">
-            Go
-          </button>
+      </form>
 
-        </form>
+      <div class="tabs-row">
 
+        <div id="tabs"></div>
 
-        <div id="status">
-          Ready
-        </div>
-
-
-        <div class="side-buttons">
-
-          <button
-            class="side-button"
-            id="gamesButton"
-            type="button"
-          >
-            🎮 Games
-          </button>
-
-          <button
-            class="side-button"
-            id="pointercrateButton"
-            type="button"
-          >
-            Geometry Dash Demonlist
-          </button>
-
-        </div>
-
-
-        <!-- =========================
-             GAMES
-             ========================= -->
-
-        <div id="gamesSection">
-
-          <div class="section-title">
-            Games
-          </div>
-
-
-          <div class="games">
-
-            <button
-              class="game-card"
-              data-game="https://slopegame.io/"
-            >
-              Slope
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://play2048.co/"
-            >
-              2048
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://orteil.dashnet.org/cookieclicker/"
-            >
-              Cookie Clicker
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://tetris.com/play-tetris"
-            >
-              Tetris
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://www.coolmathgames.com/0-run-3"
-            >
-              Run 3
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://www.crazygames.com/game/geometry-dash"
-            >
-              Geometry Dash
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://www.drifthunters2.com/"
-            >
-              Drift Hunters
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://motox3m.io/"
-            >
-              Moto X3M
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://www.coolmathgames.com/0-stickman-hook"
-            >
-              Stickman Hook
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://snowrider3d.com/"
-            >
-              Snow Rider 3D
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://www.crazygames.com/game/basketball-stars"
-            >
-              Basketball Stars
-            </button>
-
-
-            <button
-              class="game-card"
-              data-game="https://flappybird.io/"
-            >
-              Flappy Bird
-            </button>
-
-          </div>
-
-        </div>
-
-
-        <div class="credit">
-          Made by Archie Faulkner
-        </div>
+        <button
+          id="newTabButton"
+          type="button"
+          aria-label="New tab"
+          title="New tab"
+        >
+          +
+        </button>
 
       </div>
 
-    </section>
+    </header>
 
 
-    <!-- =========================
-         PROXY BROWSER
-         ========================= -->
+    <!-- =====================
+         MAIN CONTENT
+         ===================== -->
 
-    <section id="browser">
+    <main id="content">
+
+      <!-- HOME -->
+
+      <section id="shell">
+
+        <div class="hero">
+
+          <h1>
+            Forknut
+          </h1>
+
+          <p>
+            Browse the web through Forknut Proxy.
+            Enter a URL above or use one of the
+            shortcuts below.
+          </p>
+
+        </div>
+
+
+        <div class="quick-buttons">
+
+          <button
+            id="pointercrateButton"
+            class="quick-button"
+            type="button"
+          >
+            Pointercrate
+          </button>
+
+          <button
+            id="gamesButton"
+            class="quick-button"
+            type="button"
+          >
+            Games
+          </button>
+
+        </div>
+
+
+        <div class="games-title">
+          Games
+        </div>
+
+
+        <div id="gamesSection">
+
+          <div class="games">
+
+            <div
+              class="game-card"
+              data-game="https://geometrydash.io/"
+            >
+              <div class="game-name">
+                Geometry Dash
+              </div>
+
+              <div class="game-url">
+                geometrydash.io
+              </div>
+            </div>
+
+
+            <div
+              class="game-card"
+              data-game="https://shellshock.io/"
+            >
+              <div class="game-name">
+                Shell Shockers
+              </div>
+
+              <div class="game-url">
+                shellshock.io
+              </div>
+            </div>
+
+
+            <div
+              class="game-card"
+              data-game="https://krunker.io/"
+            >
+              <div class="game-name">
+                Krunker
+              </div>
+
+              <div class="game-url">
+                krunker.io
+              </div>
+            </div>
+
+
+            <div
+              class="game-card"
+              data-game="https://1v1.lol/"
+            >
+              <div class="game-name">
+                1v1.LOL
+              </div>
+
+              <div class="game-url">
+                1v1.lol
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =====================
+           BROWSER VIEW
+           ===================== -->
+
+      <section
+        id="browser"
+        aria-label="Forknut browser"
+      >
+      </section>
 
       <button
         id="homeButton"
         type="button"
-        title="Home"
       >
-        🏠
+        ← Home
       </button>
 
-    </section>
+    </main>
 
   </div>
 
 
-  <script src="/app.js"></script>
+  <div id="status">
+    Starting...
+  </div>
+
+
+  <!-- =====================
+       SCRAMJET CONTROLLER
+       ===================== -->
+
+  <script
+    src="/controller/controller.main.js"
+  ></script>
+
+
+  <!-- =====================
+       SCRAMJET UTILS
+       ===================== -->
+
+  <script
+    src="/utils/index.js"
+  ></script>
+
+
+  <!-- =====================
+       FORKNUT APP
+       ===================== -->
+
+  <script
+    src="/app.js"
+    defer
+  ></script>
 
 </body>
 </html>
