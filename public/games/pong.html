@@ -1,1 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forknut Flappy</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#111;color:white;font-family:Arial;text-align:center}
+h1{margin:15px 0 5px}
+#score{font-size:20px;margin:8px}
+canvas{background:#87ceeb;border:3px solid white;max-width:94vw;width:400px;height:600px;touch-action:none}
+button{padding:12px 22px;margin:12px;font-size:18px;border:0;border-radius:10px}
+</style>
+</head>
+<body>
 
+<h1>🐦 Flappy Fork</h1>
+<div id="score">Score: 0</div>
+<canvas id="game" width="400" height="600"></canvas>
+<br>
+<button onclick="restart()">Restart</button>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+let bird,pipes,score,gameOver,timer;
+
+function restart(){
+ bird={x:80,y:300,v:0};
+ pipes=[];
+ score=0;
+ gameOver=false;
+ clearInterval(timer);
+ timer=setInterval(loop,20);
+ draw();
+}
+
+function flap(){
+ if(gameOver)return;
+ bird.v=-7;
+}
+
+document.addEventListener("keydown",e=>{
+ if(e.code==="Space"||e.key==="ArrowUp")flap();
+});
+
+canvas.addEventListener("touchstart",e=>{
+ e.preventDefault();
+ flap();
+});
+
+canvas.addEventListener("mousedown",flap);
+
+function loop(){
+ if(gameOver)return;
+
+ bird.v+=0.35;
+ bird.y+=bird.v;
+
+ if(pipes.length===0||pipes[pipes.length-1].x<210){
+   let gap=150;
+   let top=70+Math.random()*280;
+   pipes.push({
+     x:400,
+     top:top,
+     bottom:top+gap,
+     passed:false
+   });
+ }
+
+ pipes.forEach(p=>p.x-=2.5);
+
+ for(let p of pipes){
+   if(!p.passed&&p.x+55<bird.x){
+     p.passed=true;
+     score++;
+     document.getElementById("score").textContent="Score: "+score;
+   }
+
+   if(
+     bird.x+20>p.x &&
+     bird.x<p.x+55 &&
+     (bird.y<p.top||bird.y+20>p.bottom)
+   )endGame();
+ }
+
+ pipes=pipes.filter(p=>p.x>-70);
+
+ if(bird.y<0||bird.y+20>canvas.height)endGame();
+
+ draw();
+}
+
+function draw(){
+ ctx.fillStyle="#87ceeb";
+ ctx.fillRect(0,0,400,600);
+
+ ctx.fillStyle="#228b22";
+ pipes.forEach(p=>{
+   ctx.fillRect(p.x,0,55,p.top);
+   ctx.fillRect(p.x,p.bottom,55,600-p.bottom);
+ });
+
+ ctx.fillStyle="#ffd700";
+ ctx.fillRect(bird.x,bird.y,25,25);
+
+ ctx.fillStyle="black";
+ ctx.fillRect(bird.x+17,bird.y+5,4,4);
+}
+
+function endGame(){
+ gameOver=true;
+ clearInterval(timer);
+ ctx.fillStyle="rgba(0,0,0,.65)";
+ ctx.fillRect(0,0,400,600);
+ ctx.fillStyle="white";
+ ctx.font="36px Arial";
+ ctx.textAlign="center";
+ ctx.fillText("Game Over!",200,280);
+ ctx.font="22px Arial";
+ ctx.fillText("Score: "+score,200,320);
+}
+
+restart();
+</script>
+</body>
+</html>
