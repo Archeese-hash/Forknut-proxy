@@ -1,5 +1,10 @@
 let controller = null;
-let frame = null;
+
+let tabs = [];
+
+let activeTabId = null;
+
+let nextTabId = 1;
 
 
 const form =
@@ -32,6 +37,26 @@ const homeButton =
     "homeButton"
   );
 
+const tabsElement =
+  document.getElementById(
+    "tabs"
+  );
+
+const newTabButton =
+  document.getElementById(
+    "newTabButton"
+  );
+
+const pointercrateButton =
+  document.getElementById(
+    "pointercrateButton"
+  );
+
+const gamesButton =
+  document.getElementById(
+    "gamesButton"
+  );
+
 
 function setStatus(text) {
   if (status) {
@@ -40,44 +65,135 @@ function setStatus(text) {
 }
 
 
-function normalizeUrl(value) {
+/* -------------------------------- */
+/* URL handling */
+/* -------------------------------- */
 
-  let url =
+function normalizeUrl(value) {
+  const text =
     value.trim();
 
-  if (!url) {
+  if (!text) {
     throw new Error(
-      "Enter a website address."
+      "Enter a website or search term."
     );
   }
 
   if (
-    !/^https?:\/\//i.test(url)
+    /^https?:\/\//i.test(text)
   ) {
-    url =
-      "https://" + url;
+    return new URL(text).href;
   }
 
-  const parsed =
-    new URL(url);
-
+  /*
+   * Looks like a domain.
+   */
   if (
-    !/^https?:$/.test(
-      parsed.protocol
+    /^[a-z0-9-]+(\.[a-z0-9-]+)+(\/.*)?$/i.test(
+      text
     )
   ) {
-    throw new Error(
-      "Only HTTP and HTTPS URLs are supported."
+    return (
+      "https://" +
+      text
     );
   }
 
-  return parsed.href;
+  /*
+   * Otherwise search Google.
+   */
+  return (
+    "https://www.google.com/search?q=" +
+    encodeURIComponent(text)
+  );
 }
 
 
-/*
- * Register Forknut's service worker.
- */
+/* -------------------------------- */
+/* YouTube detection */
+/* -------------------------------- */
+
+function getYouTubeVideoId(value) {
+  try {
+    const url =
+      new URL(value);
+
+    const hostname =
+      url.hostname
+        .toLowerCase()
+        .replace(/^www\./, "")
+        .replace(/^m\./, "");
+
+    if (
+      hostname === "youtube.com" ||
+      hostname === "youtube-nocookie.com"
+    ) {
+
+      const videoId =
+        url.searchParams.get("v");
+
+      if (
+        videoId &&
+        /^[A-Za-z0-9_-]{6,20}$/.test(
+          videoId
+        )
+      ) {
+        return videoId;
+      }
+
+      const shorts =
+        url.pathname.match(
+          /^\/shorts\/([A-Za-z0-9_-]{6,20})/
+        );
+
+      if (shorts) {
+        return shorts[1];
+      }
+
+      const embed =
+        url.pathname.match(
+          /^\/embed\/([A-Za-z0-9_-]{6,20})/
+        );
+
+      if (embed) {
+        return embed[1];
+      }
+    }
+
+    if (
+      hostname === "youtu.be"
+    ) {
+
+      const id =
+        url.pathname
+          .split("/")
+          .filter(Boolean)[0];
+
+      if (
+        id &&
+        /^[A-Za-z0-9_-]{6,20}$/.test(
+          id
+        )
+      ) {
+        return id;
+      }
+    }
+
+  } catch (error) {
+    console.error(
+      "YouTube detection error:",
+      error
+    );
+  }
+
+  return null;
+}
+
+
+/* -------------------------------- */
+/* Service worker */
+/* -------------------------------- */
+
 async function registerServiceWorker() {
 
   if (
@@ -88,7 +204,6 @@ async function registerServiceWorker() {
     );
   }
 
-
   const registration =
     await navigator.serviceWorker.register(
       "/sw.js",
@@ -98,21 +213,12 @@ async function registerServiceWorker() {
       }
     );
 
-
-  /*
-   * Already controlling the page.
-   */
   if (
     navigator.serviceWorker.controller
   ) {
     return navigator.serviceWorker.controller;
   }
 
-
-  /*
-   * Wait for the new service worker
-   * to take control.
-   */
   await new Promise(
     (resolve, reject) => {
 
@@ -127,7 +233,6 @@ async function registerServiceWorker() {
           },
           15000
         );
-
 
       navigator.serviceWorker.addEventListener(
         "controllerchange",
@@ -148,7 +253,6 @@ async function registerServiceWorker() {
     }
   );
 
-
   return (
     navigator.serviceWorker.controller ||
     registration.active
@@ -156,28 +260,23 @@ async function registerServiceWorker() {
 }
 
 
-/*
- * Create Scramjet controller.
- */
+/* -------------------------------- */
+/* Scramjet controller */
+/* -------------------------------- */
+
 async function getController() {
 
   if (controller) {
     return controller;
   }
 
-
   setStatus(
     "Starting Forknut..."
   );
 
-
   const serviceWorker =
     await registerServiceWorker();
 
-
-  /*
-   * Wisp connection.
-   */
   const wispUrl =
     (
       location.protocol === "https:"
@@ -188,13 +287,7 @@ async function getController() {
     location.host +
     "/wisp/";
 
-
-  /*
-   * Load Libcurl from the static
-   * /libcurl/ directory.
-   */
   let LibcurlClient;
-
 
   try {
 
@@ -202,7 +295,6 @@ async function getController() {
       await import(
         "/libcurl/index.mjs"
       );
-
 
     LibcurlClient =
       libcurl.default;
@@ -219,7 +311,6 @@ async function getController() {
     );
   }
 
-
   if (
     typeof LibcurlClient !==
     "function"
@@ -229,25 +320,13 @@ async function getController() {
     );
   }
 
-
-  /*
-   * Create Libcurl transport.
-   */
   const transport =
     new LibcurlClient({
       wisp: wispUrl
     });
 
-
-  /*
-   * Start Libcurl.
-   */
   await transport.init();
 
-
-  /*
-   * Create Scramjet controller.
-   */
   controller =
     new $scramjetController.Controller(
       {
@@ -273,166 +352,693 @@ async function getController() {
       }
     );
 
-
-  /*
-   * Wait until Scramjet is ready.
-   */
   await controller.wait();
-
 
   return controller;
 }
 
 
-/*
- * Open a website through Forknut.
- */
-async function browse(url) {
+/* -------------------------------- */
+/* Create a new tab */
+/* -------------------------------- */
+
+function createTab() {
+
+  const tab = {
+    id: nextTabId++,
+    title: "New Tab",
+    url: "",
+    frame: null,
+    iframe: null,
+    youtubeFrame: null
+  };
+
+  tabs.push(tab);
+
+  activeTabId =
+    tab.id;
+
+  renderTabs();
+
+  showTab(tab);
+
+  setStatus(
+    "Ready"
+  );
+
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
+
+  return tab;
+}
+
+
+/* -------------------------------- */
+/* Find active tab */
+/* -------------------------------- */
+
+function getActiveTab() {
+
+  return tabs.find(
+    tab =>
+      tab.id ===
+      activeTabId
+  );
+}
+
+
+/* -------------------------------- */
+/* Render tabs */
+/* -------------------------------- */
+
+function renderTabs() {
+
+  if (!tabsElement) {
+    return;
+  }
+
+  tabsElement.innerHTML = "";
+
+  for (
+    const tab of tabs
+  ) {
+
+    const element =
+      document.createElement(
+        "div"
+      );
+
+    element.className =
+      "tab";
+
+    if (
+      tab.id ===
+      activeTabId
+    ) {
+      element.classList.add(
+        "active"
+      );
+    }
+
+    const title =
+      document.createElement(
+        "div"
+      );
+
+    title.className =
+      "tab-title";
+
+    title.textContent =
+      tab.title ||
+      "New Tab";
+
+    const close =
+      document.createElement(
+        "button"
+      );
+
+    close.className =
+      "tab-close";
+
+    close.type =
+      "button";
+
+    close.textContent =
+      "×";
+
+    close.title =
+      "Close tab";
+
+    close.addEventListener(
+      "click",
+      event => {
+
+        event.stopPropagation();
+
+        closeTab(
+          tab.id
+        );
+      }
+    );
+
+    element.appendChild(
+      title
+    );
+
+    element.appendChild(
+      close
+    );
+
+    element.addEventListener(
+      "click",
+      () => {
+        switchTab(
+          tab.id
+        );
+      }
+    );
+
+    tabsElement.appendChild(
+      element
+    );
+  }
+}
+
+
+/* -------------------------------- */
+/* Switch tab */
+/* -------------------------------- */
+
+function switchTab(id) {
+
+  const tab =
+    tabs.find(
+      item =>
+        item.id === id
+    );
+
+  if (!tab) {
+    return;
+  }
+
+  activeTabId =
+    id;
+
+  renderTabs();
+
+  showTab(tab);
+
+  setStatus(
+    tab.url ||
+    "Ready"
+  );
+}
+
+
+/* -------------------------------- */
+/* Show tab */
+/* -------------------------------- */
+
+function showTab(tab) {
+
+  if (!browser) {
+    return;
+  }
+
+  shell.classList.add(
+    "hidden"
+  );
+
+  browser.classList.add(
+    "active"
+  );
+
+  homeButton.classList.add(
+    "visible"
+  );
+
+  /*
+   * Hide every iframe.
+   */
+
+  for (
+    const other of tabs
+  ) {
+
+    if (
+      other.iframe
+    ) {
+      other.iframe.style.display =
+        "none";
+    }
+
+    if (
+      other.youtubeFrame
+    ) {
+      other.youtubeFrame.style.display =
+        "none";
+    }
+  }
+
+  /*
+   * Show normal proxy iframe.
+   */
+
+  if (
+    tab.iframe
+  ) {
+    tab.iframe.style.display =
+      "block";
+  }
+
+  /*
+   * Show YouTube iframe.
+   */
+
+  if (
+    tab.youtubeFrame
+  ) {
+    tab.youtubeFrame.style.display =
+      "block";
+  }
+}
+
+
+/* -------------------------------- */
+/* Close tab */
+/* -------------------------------- */
+
+function closeTab(id) {
+
+  const index =
+    tabs.findIndex(
+      tab =>
+        tab.id === id
+    );
+
+  if (
+    index === -1
+  ) {
+    return;
+  }
+
+  const tab =
+    tabs[index];
+
+  if (
+    tab.iframe
+  ) {
+    tab.iframe.remove();
+  }
+
+  if (
+    tab.youtubeFrame
+  ) {
+    tab.youtubeFrame.remove();
+  }
+
+  tabs.splice(
+    index,
+    1
+  );
+
+  /*
+   * If there are no tabs left,
+   * automatically create a new one.
+   */
+
+  if (
+    tabs.length === 0
+  ) {
+
+    activeTabId =
+      null;
+
+    browser.classList.remove(
+      "active"
+    );
+
+    shell.classList.remove(
+      "hidden"
+    );
+
+    homeButton.classList.remove(
+      "visible"
+    );
+
+    createTab();
+
+    return;
+  }
+
+  /*
+   * If the closed tab was active,
+   * switch to another tab.
+   */
+
+  if (
+    activeTabId === id
+  ) {
+
+    const newIndex =
+      Math.min(
+        index,
+        tabs.length - 1
+      );
+
+    activeTabId =
+      tabs[newIndex].id;
+  }
+
+  renderTabs();
+
+  const active =
+    getActiveTab();
+
+  showTab(
+    active
+  );
+
+  setStatus(
+    active?.url ||
+    "Ready"
+  );
+}
+
+
+/* -------------------------------- */
+/* Create YouTube player */
+/* -------------------------------- */
+
+function showYouTubePlayer(
+  tab,
+  videoId
+) {
+
+  if (
+    tab.youtubeFrame
+  ) {
+    tab.youtubeFrame.remove();
+  }
+
+  const iframe =
+    document.createElement(
+      "iframe"
+    );
+
+  iframe.className =
+    "youtube-frame";
+
+  iframe.title =
+    "YouTube video";
+
+  iframe.allow =
+    "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+
+  iframe.allowFullscreen =
+    true;
+
+  iframe.setAttribute(
+    "referrerpolicy",
+    "strict-origin-when-cross-origin"
+  );
+
+  iframe.src =
+    "https://www.youtube.com/embed/" +
+    encodeURIComponent(videoId) +
+    "?playsinline=1&rel=0&controls=1";
+
+  browser.appendChild(
+    iframe
+  );
+
+  tab.youtubeFrame =
+    iframe;
+
+  tab.title =
+    "YouTube";
+
+  renderTabs();
+
+  showTab(
+    tab
+  );
+
+  setStatus(
+    "YouTube video"
+  );
+}
+
+
+/* -------------------------------- */
+/* Create Scramjet iframe */
+/* -------------------------------- */
+
+async function createProxyFrame(
+  tab
+) {
+
+  const sj =
+    await getController();
+
+  const iframe =
+    document.createElement(
+      "iframe"
+    );
+
+  iframe.className =
+    "proxy-frame";
+
+  iframe.setAttribute(
+    "allow",
+    "fullscreen; autoplay; gamepad; picture-in-picture; encrypted-media"
+  );
+
+  iframe.setAttribute(
+    "allowfullscreen",
+    ""
+  );
+
+  iframe.setAttribute(
+    "referrerpolicy",
+    "no-referrer"
+  );
+
+  iframe.setAttribute(
+    "loading",
+    "eager"
+  );
+
+  iframe.setAttribute(
+    "title",
+    "Forknut Proxy"
+  );
+
+  browser.appendChild(
+    iframe
+  );
+
+  tab.iframe =
+    iframe;
+
+  tab.frame =
+    sj.createFrame(
+      iframe,
+      {
+        plugins: [
+
+          new $scramjetUtils.HttpCachePlugin(),
+
+          new $scramjetUtils.UrlWatcherPlugin(
+            currentUrl => {
+
+              /*
+               * Ignore updates for tabs that
+               * are no longer active.
+               */
+
+              if (
+                tab.id !==
+                activeTabId
+              ) {
+                return;
+              }
+
+              console.log(
+                "[Forknut] URL:",
+                currentUrl
+              );
+
+              /*
+               * Detect YouTube links.
+               */
+
+              const videoId =
+                getYouTubeVideoId(
+                  currentUrl
+                );
+
+              if (
+                videoId
+              ) {
+
+                showYouTubePlayer(
+                  tab,
+                  videoId
+                );
+
+                return;
+              }
+
+              tab.url =
+                currentUrl;
+
+              /*
+               * Use hostname as the tab name.
+               */
+
+              try {
+
+                const url =
+                  new URL(
+                    currentUrl
+                  );
+
+                tab.title =
+                  url.hostname
+                    .replace(
+                      /^www\./,
+                      ""
+                    );
+
+              } catch {
+                tab.title =
+                  "Forknut";
+              }
+
+              renderTabs();
+
+              setStatus(
+                currentUrl
+              );
+            }
+          ),
+
+          new $scramjetUtils.CatchEscapedLinksPlugin(
+            () =>
+              new URL(
+                location.href
+              )
+          )
+
+        ]
+      }
+    );
+
+  return tab;
+}
+
+
+/* -------------------------------- */
+/* Browse */
+/* -------------------------------- */
+
+async function browse(
+  url
+) {
+
+  const tab =
+    getActiveTab();
+
+  if (!tab) {
+    return;
+  }
 
   try {
 
     setStatus(
-      "Starting proxy..."
+      "Loading..."
     );
 
-
-    const sj =
-      await getController();
-
-
     /*
-     * Create iframe/frame once.
+     * YouTube directly entered
+     * into the address/search bar.
      */
-    if (!frame) {
 
-      const iframe =
-        document.createElement(
-          "iframe"
-        );
-
-
-      iframe.className =
-        "proxy-frame";
-
-
-      iframe.setAttribute(
-        "allow",
-        "fullscreen; autoplay; gamepad; picture-in-picture; encrypted-media"
+    const videoId =
+      getYouTubeVideoId(
+        url
       );
 
+    if (
+      videoId
+    ) {
 
-      iframe.setAttribute(
-        "allowfullscreen",
-        ""
+      tab.url =
+        url;
+
+      showYouTubePlayer(
+        tab,
+        videoId
       );
 
-
-      iframe.setAttribute(
-        "referrerpolicy",
-        "no-referrer"
-      );
-
-
-      iframe.setAttribute(
-        "loading",
-        "eager"
-      );
-
-
-      iframe.setAttribute(
-        "title",
-        "Forknut Proxy"
-      );
-
-
-      browser.appendChild(
-        iframe
-      );
-
-
-      /*
-       * Create the Scramjet frame.
-       */
-      frame =
-        sj.createFrame(
-          iframe,
-          {
-            plugins: [
-
-              /*
-               * Cache website resources.
-               */
-              new $scramjetUtils.HttpCachePlugin(),
-
-
-              /*
-               * Watch navigation.
-               */
-              new $scramjetUtils.UrlWatcherPlugin(
-                (currentUrl) => {
-
-                  setStatus(
-                    currentUrl
-                  );
-
-                }
-              ),
-
-
-              /*
-               * Keep links/popups inside
-               * Forknut where possible.
-               */
-              new $scramjetUtils.CatchEscapedLinksPlugin(
-                () =>
-                  new URL(
-                    location.href
-                  )
-              )
-
-            ]
-          }
-        );
+      return;
     }
 
+    /*
+     * Remove old YouTube player
+     * if this tab had one.
+     */
+
+    if (
+      tab.youtubeFrame
+    ) {
+
+      tab.youtubeFrame.remove();
+
+      tab.youtubeFrame =
+        null;
+    }
 
     /*
-     * Show proxy browser.
+     * Create the Scramjet frame
+     * only once for this tab.
      */
-    shell.classList.add(
-      "hidden"
-    );
 
-    browser.classList.add(
-      "active"
-    );
+    if (
+      !tab.frame
+    ) {
+      await createProxyFrame(
+        tab
+      );
+    }
 
-    homeButton.classList.add(
-      "visible"
-    );
+    tab.url =
+      url;
 
+    tab.title =
+      (() => {
+
+        try {
+
+          return new URL(
+            url
+          ).hostname.replace(
+            /^www\./,
+            ""
+          );
+
+        } catch {
+
+          return "Loading...";
+
+        }
+
+      })();
+
+    renderTabs();
+
+    showTab(
+      tab
+    );
 
     setStatus(
-      "Loading " + url
+      "Loading " +
+      url
     );
 
-
-    /*
-     * Navigate.
-     *
-     * frame.go() is intentionally
-     * not awaited.
-     */
-    frame.go(url);
-
+    tab.frame.go(
+      url
+    );
 
   } catch (error) {
 
     console.error(
-      "Forknut proxy error:",
+      "[Forknut] Proxy error:",
       error
     );
-
 
     setStatus(
       error?.message ||
@@ -442,17 +1048,38 @@ async function browse(url) {
 }
 
 
-/*
- * Main URL form.
- */
-if (form) {
+/* -------------------------------- */
+/* New tab button */
+/* -------------------------------- */
+
+if (
+  newTabButton
+) {
+
+  newTabButton.addEventListener(
+    "click",
+    () => {
+
+      createTab();
+
+    }
+  );
+}
+
+
+/* -------------------------------- */
+/* Search/address bar */
+/* -------------------------------- */
+
+if (
+  form
+) {
 
   form.addEventListener(
     "submit",
-    async (event) => {
+    async event => {
 
       event.preventDefault();
-
 
       try {
 
@@ -461,7 +1088,6 @@ if (form) {
             input.value
           );
 
-
         await browse(
           url
         );
@@ -469,10 +1095,9 @@ if (form) {
       } catch (error) {
 
         console.error(
-          "Forknut URL error:",
+          "[Forknut] URL error:",
           error
         );
-
 
         setStatus(
           error?.message ||
@@ -485,34 +1110,50 @@ if (form) {
 }
 
 
-/*
- * Home button.
- */
-if (homeButton) {
+/* -------------------------------- */
+/* Home button */
+/* -------------------------------- */
+
+if (
+  homeButton
+) {
 
   homeButton.addEventListener(
     "click",
     () => {
 
+      const tab =
+        getActiveTab();
+
+      if (
+        tab?.iframe
+      ) {
+        tab.iframe.style.display =
+          "none";
+      }
+
+      if (
+        tab?.youtubeFrame
+      ) {
+        tab.youtubeFrame.style.display =
+          "none";
+      }
+
       browser.classList.remove(
         "active"
       );
-
 
       shell.classList.remove(
         "hidden"
       );
 
-
       homeButton.classList.remove(
         "visible"
       );
 
-
       setStatus(
         "Ready"
       );
-
 
       if (input) {
         input.focus();
@@ -523,9 +1164,106 @@ if (homeButton) {
 }
 
 
+/* -------------------------------- */
+/* Pointercrate button */
+/* -------------------------------- */
+
+if (
+  pointercrateButton
+) {
+
+  pointercrateButton.addEventListener(
+    "click",
+    async () => {
+
+      const tab =
+        getActiveTab();
+
+      if (!tab) {
+        return;
+      }
+
+      const url =
+        "https://pointercrate.com/demonlist/";
+
+      await browse(
+        url
+      );
+    }
+  );
+}
+
+
+/* -------------------------------- */
+/* Games button */
+/* -------------------------------- */
+
+if (
+  gamesButton
+) {
+
+  gamesButton.addEventListener(
+    "click",
+    () => {
+
+      const section =
+        document.getElementById(
+          "gamesSection"
+        );
+
+      if (
+        section
+      ) {
+
+        section.scrollIntoView({
+          behavior: "smooth"
+        });
+
+      }
+    }
+  );
+}
+
+
+/* -------------------------------- */
+/* Game cards */
+/* -------------------------------- */
+
+document
+  .querySelectorAll(
+    "[data-game]"
+  )
+  .forEach(
+    card => {
+
+      card.addEventListener(
+        "click",
+        async () => {
+
+          const url =
+            card.dataset.game;
+
+          await browse(
+            url
+          );
+
+        }
+      );
+
+    }
+  );
+
+
+/* -------------------------------- */
+/* Start Forknut */
+/* -------------------------------- */
+
 /*
- * Initial status.
+ * Start with one empty tab.
  */
+
+createTab();
+
 setStatus(
   "Ready"
 );
