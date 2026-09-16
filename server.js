@@ -248,6 +248,42 @@ const app = Fastify({
   }
 });
 
+const diagnosticLog = [];
+
+app.post("/__forknut/diag", async (request, reply) => {
+  const entry = request.body && typeof request.body === "object"
+    ? request.body
+    : { message: String(request.body || "") };
+
+  diagnosticLog.push({
+    receivedAt: new Date().toISOString(),
+    ...entry
+  });
+
+  if (diagnosticLog.length > 500) diagnosticLog.shift();
+
+  console.log("[Forknut Diagnostic]", entry);
+  return reply.code(204).send();
+});
+
+app.get("/__forknut/diag", async () => {
+  return {
+    ok: true,
+    count: diagnosticLog.length,
+    events: diagnosticLog
+  };
+});
+
+app.get("/__forknut/diag.txt", async (request, reply) => {
+  const text = diagnosticLog
+    .map(item => JSON.stringify(item))
+    .join("\n");
+
+  return reply
+    .type("text/plain; charset=utf-8")
+    .send(text || "No diagnostic events yet.");
+});
+
 app.addHook(
   "onSend",
   async (request, reply) => {
