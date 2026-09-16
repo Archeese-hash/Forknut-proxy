@@ -312,6 +312,75 @@ app.get("/__forknut/image", async (request, reply) => {
   }
 });
 
+
+function cleanYoutubeId(value) {
+  const text = String(value || "");
+  const patterns = [
+    /(?:i\.)?ytimg\.com\/(?:vi|vi_webp)\/([A-Za-z0-9_-]{6,20})/i,
+    /youtube(?:-nocookie)?\.com\/(?:embed\/|shorts\/|watch[^#]*[?&]v=)([A-Za-z0-9_-]{6,20})/i,
+    /youtu\.be\/([A-Za-z0-9_-]{6,20})/i
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1];
+  }
+  try {
+    const url = new URL(text);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "youtube.com" || host === "youtube-nocookie.com") {
+      const v = url.searchParams.get("v");
+      if (v && /^[A-Za-z0-9_-]{6,20}$/.test(v)) return v;
+      const m = url.pathname.match(/^\/(?:shorts|embed)\/([A-Za-z0-9_-]{6,20})/);
+      if (m) return m[1];
+    }
+    if (host === "youtu.be") {
+      const id = url.pathname.split("/").filter(Boolean)[0];
+      if (id && /^[A-Za-z0-9_-]{6,20}$/.test(id)) return id;
+    }
+  } catch {}
+  return null;
+}
+
+app.get("/__forknut/youtube-thumb/:id", async (request, reply) => {
+  const id = String(request.params?.id || "");
+  if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) {
+    return reply.code(400).type("text/plain; charset=utf-8").send("Invalid YouTube video id.");
+  }
+
+  const variants = [
+    `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+    `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
+    `https://i.ytimg.com/vi/${id}/default.jpg`
+  ];
+
+  for (const target of variants) {
+    try {
+      await assertSafeUpstream(target);
+      const upstream = await fetch(target, {
+        headers: {
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+          "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "referer": "https://www.youtube.com/",
+          "accept-language": "en-US,en;q=0.9"
+        }
+      });
+      if (!upstream.ok) continue;
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      if (!buffer.length) continue;
+      return reply
+        .code(200)
+        .type(upstream.headers.get("content-type") || "image/jpeg")
+        .header("Cache-Control", "public, max-age=3600")
+        .header("Cross-Origin-Resource-Policy", "cross-origin")
+        .send(buffer);
+    } catch (error) {
+      console.error("[Forknut] YouTube thumbnail error:", error?.message || error);
+    }
+  }
+
+  return reply.code(404).type("text/plain; charset=utf-8").send("YouTube thumbnail not available.");
+});
+
 app.get("/health", async () => ({
   ok: true,
   service: "Forknut Proxy",
