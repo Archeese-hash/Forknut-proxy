@@ -224,6 +224,151 @@ app.get("/__forknut/diag.txt", async (request, reply) => {
     .send(diagnosticLog.map(x => JSON.stringify(x)).join("\n") || "No diagnostic events yet.");
 });
 
+
+
+function isBlockedHostname(hostname) {
+  const host = hostname.toLowerCase();
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  if (host === "127.0.0.1" || host === "0.0.0.0" || host === "::1") return true;
+  if (host.endsWith(".local") || host.endsWith(".internal")) return true;
+  return false;
+}
+
+function isPrivateIPv4(hostname) {
+  const parts = hostname.split(".").map(Number);
+  if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return false;
+  const [a, b] = parts;
+  return (
+    a === 10 ||
+    a === 127 ||
+    a === 0 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
+async function assertSafeUpstream(url) {
+  const parsed = new URL(url);
+  if (!/^https?:$/.test(parsed.protocol)) {
+    throw new Error("Only HTTP(S) image URLs are allowed.");
+  }
+  if (isBlockedHostname(parsed.hostname) || isPrivateIPv4(parsed.hostname)) {
+    throw new Error("Blocked private/local upstream address.");
+  }
+
+  try {
+    const dns = await import("node:dns/promises");
+    const addresses = await dns.lookup(parsed.hostname, { all: true });
+    for (const address of addresses) {
+      if (isPrivateIPv4(address.address)) {
+        throw new Error("Blocked upstream resolving to a private IPv4 address.");
+      }
+      const value = String(address.address).toLowerCase();
+      if (value === "::1" || value.startsWith("fc") || value.startsWith("fd") || value.startsWith("fe80:")) {
+        throw new Error("Blocked upstream resolving to a private IPv6 address.");
+      }
+    }
+  } catch (error) {
+    if (String(error?.message || "").startsWith("Blocked upstream")) throw error;
+    // DNS lookup failures are reported normally by the route below.
+  }
+}
+
+app.get("/__forknut/image", async (request, reply) => {
+  const raw = request.query?.url;
+  if (!raw || typeof raw !== "string") {
+    return reply.code(400).type("text/plain; charset=utf-8").send("Missing image URL.");
+  }
+
+  let target;
+  try {
+    target = new URL(raw);
+  } catch {
+    return reply.code(400).type("text/plain; charset=utf-8").send("Invalid image URL.");
+  }
+
+  const started = Date.now();
+  let current = target;
+
+  try {
+    for (let redirects = 0; redirects <= 5; redirects++) {
+      await assertSafeUpstream(current.href);
+
+      addServerDiagnostic({
+        kind: "IMAGE_PROXY_FETCH",
+        url: current.href,
+        redirect: redirects
+      });
+
+      const upstream = await fetch(current.href, {
+        redirect: "manual",
+        headers: {
+          "user-agent": request.headers["user-agent"] || "Mozilla/5.0 (iPad; CPU OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1",
+          "accept": request.headers.accept || "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+          "referer": current.origin + "/"
+        }
+      });
+
+      const location = upstream.headers.get("location");
+      if (upstream.status >= 300 && upstream.status < 400 && location) {
+        current = new URL(location, current.href);
+        continue;
+      }
+
+      const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+      const contentLength = Number(upstream.headers.get("content-length") || 0);
+
+      if (!upstream.ok) {
+        const body = (await upstream.text()).slice(0, 1000);
+        addServerDiagnostic({
+          kind: "IMAGE_PROXY_UPSTREAM_ERROR",
+          url: current.href,
+          status: upstream.status,
+          contentType,
+          body,
+          elapsedMs: Date.now() - started
+        });
+        return reply.code(upstream.status).type("text/plain; charset=utf-8").send(`Upstream image error ${upstream.status}: ${body}`);
+      }
+
+      if (contentLength > 12 * 1024 * 1024) {
+        return reply.code(413).type("text/plain; charset=utf-8").send("Image is larger than the 12 MB diagnostic proxy limit.");
+      }
+
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      if (buffer.length > 12 * 1024 * 1024) {
+        return reply.code(413).type("text/plain; charset=utf-8").send("Image is larger than the 12 MB diagnostic proxy limit.");
+      }
+
+      addServerDiagnostic({
+        kind: "IMAGE_PROXY_OK",
+        url: current.href,
+        status: upstream.status,
+        contentType,
+        contentLength: upstream.headers.get("content-length") || "",
+        bytes: buffer.length,
+        elapsedMs: Date.now() - started
+      });
+
+      return reply
+        .code(200)
+        .type(contentType)
+        .header("Cache-Control", "public, max-age=300")
+        .header("Cross-Origin-Resource-Policy", "cross-origin")
+        .send(buffer);
+    }
+
+    throw new Error("Too many upstream redirects.");
+  } catch (error) {
+    captureServerError("IMAGE_PROXY_EXCEPTION", error, {
+      url: current.href,
+      elapsedMs: Date.now() - started
+    });
+    return reply.code(502).type("text/plain; charset=utf-8").send(`Image proxy exception: ${String(error?.message || error)}`);
+  }
+});
+
 app.get("/health", async () => ({
   ok: true,
   service: "Forknut Proxy",
