@@ -122,6 +122,29 @@ function addServerDiagnostic(entry) {
   console.log("[Forknut Diagnostic]", item);
 }
 
+function captureServerError(kind, error, extra = {}) {
+  const err = error || {};
+  addServerDiagnostic({
+    kind,
+    name: err.name || "Error",
+    message: String(err.message || err || ""),
+    stack: String(err.stack || ""),
+    ...extra
+  });
+}
+
+process.on("uncaughtException", (error) => {
+  captureServerError("PROCESS_UNCAUGHT_EXCEPTION", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  captureServerError("PROCESS_UNHANDLED_REJECTION", reason);
+});
+
+process.on("warning", (warning) => {
+  captureServerError("PROCESS_WARNING", warning);
+});
+
 const app = Fastify({
   logger: true,
   serverFactory: (handler) => {
@@ -182,6 +205,19 @@ app.delete("/__forknut/diag", async () => {
   return { ok: true };
 });
 
+app.setErrorHandler((error, request, reply) => {
+  captureServerError("FASTIFY_ERROR", error, {
+    method: request.method,
+    url: request.url
+  });
+
+  if (!reply.sent) {
+    reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 500);
+    reply.type("text/plain; charset=utf-8");
+    return reply.send(`Forknut server error: ${String(error.message || error)}`);
+  }
+});
+
 app.get("/__forknut/diag.txt", async (request, reply) => {
   return reply
     .type("text/plain; charset=utf-8")
@@ -196,7 +232,7 @@ app.get("/health", async () => ({
   transport: "epoxy",
   wisp: true,
   coep: "credentialless",
-  diagnostic: "v2"
+  diagnostic: "v4-server-exceptions"
 }));
 
 app.addHook("onSend", async (request, reply) => {
@@ -244,4 +280,4 @@ const port = Number(process.env.PORT || 3000);
 
 await app.listen({ host: "0.0.0.0", port });
 
-console.log(`Forknut Diagnostic v2 running on port ${port}`);
+console.log(`Forknut Diagnostic v4 running on port ${port}`);
