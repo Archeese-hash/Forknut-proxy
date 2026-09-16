@@ -14,6 +14,186 @@ const newTabButton = document.getElementById("newTabButton");
 const pointercrateButton = document.getElementById("pointercrateButton");
 const gamesButton = document.getElementById("gamesButton");
 
+/* -------------------------------- */
+/* Forknut image/resource diagnostics */
+/* -------------------------------- */
+
+const diagnosticEvents = [];
+let diagnosticPanel = null;
+let diagnosticObserver = null;
+
+function ensureDiagnosticPanel() {
+  if (diagnosticPanel) return diagnosticPanel;
+
+  diagnosticPanel = document.createElement("div");
+  diagnosticPanel.id = "forknutDiagnostics";
+  diagnosticPanel.style.cssText = [
+    "position:fixed",
+    "left:8px",
+    "right:8px",
+    "bottom:8px",
+    "z-index:2147483647",
+    "max-height:34vh",
+    "overflow:auto",
+    "background:rgba(0,0,0,.92)",
+    "color:#fff",
+    "border:1px solid rgba(255,255,255,.25)",
+    "border-radius:10px",
+    "padding:10px",
+    "font:12px/1.35 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
+    "display:none",
+    "white-space:pre-wrap",
+    "word-break:break-all"
+  ].join(";");
+
+  document.body.appendChild(diagnosticPanel);
+  return diagnosticPanel;
+}
+
+function diagnosticLog(type, message, extra = {}) {
+  const entry = {
+    time: new Date().toISOString(),
+    type,
+    message,
+    ...extra
+  };
+
+  diagnosticEvents.push(entry);
+  if (diagnosticEvents.length > 100) diagnosticEvents.shift();
+
+  console.log("[Forknut Diagnostic]", entry);
+
+  const panel = ensureDiagnosticPanel();
+  panel.style.display = "block";
+  panel.textContent = diagnosticEvents
+    .slice(-50)
+    .map(item => {
+      const extraText = Object.entries(item)
+        .filter(([key]) => !["time", "type", "message"].includes(key))
+        .map(([key, value]) => `${key}=${value}`)
+        .join(" ");
+      return `${item.type} ${item.message}${extraText ? " | " + extraText : ""}`;
+    })
+    .join("\n");
+
+  try {
+    const body = JSON.stringify(entry);
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(
+        "/__forknut/diag",
+        new Blob([body], { type: "application/json" })
+      );
+    } else {
+      fetch("/__forknut/diag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true
+      }).catch(() => {});
+    }
+  } catch {}
+}
+
+function shortUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.href.length > 240 ? url.href.slice(0, 237) + "..." : url.href;
+  } catch {
+    return String(value || "").slice(0, 240);
+  }
+}
+
+function watchImage(img, frameUrl) {
+  if (!img || img.dataset.forknutDiag === "1") return;
+  img.dataset.forknutDiag = "1";
+
+  const report = (type) => {
+    diagnosticLog(
+      type,
+      type === "IMG_OK" ? "image loaded" : "image failed",
+      {
+        src: shortUrl(img.currentSrc || img.src),
+        complete: img.complete,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        frame: shortUrl(frameUrl || "")
+      }
+    );
+  };
+
+  img.addEventListener("load", () => report("IMG_OK"), { once: true });
+  img.addEventListener("error", () => report("IMG_FAIL"), { once: true });
+
+  if (img.complete) {
+    if (img.naturalWidth > 0) report("IMG_OK");
+    else report("IMG_FAIL");
+  }
+}
+
+function inspectFrameResources(tab) {
+  const iframe = tab?.iframe;
+  if (!iframe) return;
+
+  try {
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    if (!doc || !win) {
+      diagnosticLog("FRAME", "iframe document is not accessible");
+      return;
+    }
+
+    diagnosticLog("FRAME", "inspecting proxied document", {
+      url: shortUrl(tab.url || win.location.href || "")
+    });
+
+    const inspect = () => {
+      doc.querySelectorAll("img").forEach(img => watchImage(img, tab.url));
+
+      try {
+        const resources = win.performance?.getEntriesByType?.("resource") || [];
+        resources.slice(-100).forEach(resource => {
+          const name = resource.name || "";
+          const type = resource.initiatorType || "";
+          if (["img", "image", "video", "audio", "css", "script", "fetch", "xmlhttprequest"].includes(type)) {
+            diagnosticLog("RESOURCE", type, {
+              url: shortUrl(name),
+              duration: Math.round(resource.duration || 0),
+              transfer: resource.transferSize ?? "?"
+            });
+          }
+        });
+      } catch (error) {
+        diagnosticLog("RESOURCE_ERR", "performance resource inspection failed", { error: String(error) });
+      }
+    };
+
+    inspect();
+
+    if (diagnosticObserver) diagnosticObserver.disconnect();
+    diagnosticObserver = new MutationObserver(() => {
+      doc.querySelectorAll("img").forEach(img => watchImage(img, tab.url));
+    });
+    diagnosticObserver.observe(doc.documentElement || doc, {
+      childList: true,
+      subtree: true
+    });
+
+    win.addEventListener("error", event => {
+      diagnosticLog("FRAME_ERROR", event.message || "resource error", {
+        source: shortUrl(event.filename || ""),
+        line: event.lineno || "?",
+        column: event.colno || "?"
+      });
+    }, true);
+
+    win.addEventListener("unhandledrejection", event => {
+      diagnosticLog("FRAME_REJECTION", String(event.reason || "unknown rejection"));
+    });
+  } catch (error) {
+    diagnosticLog("FRAME_ERR", "could not inspect iframe", { error: String(error) });
+  }
+}
+
 function setStatus(text) {
   if (status) status.textContent = text;
 }
@@ -289,6 +469,12 @@ async function createProxyFrame(tab) {
   browser.appendChild(iframe);
   tab.iframe = iframe;
 
+  iframe.addEventListener("load", () => {
+    diagnosticLog("IFRAME", "iframe load event", { url: shortUrl(tab.url || "") });
+    setTimeout(() => inspectFrameResources(tab), 250);
+    setTimeout(() => inspectFrameResources(tab), 1500);
+  });
+
   tab.frame = sj.createFrame(iframe, {
     plugins: [
       new $scramjetUtils.HttpCachePlugin(),
@@ -413,4 +599,5 @@ document.querySelectorAll("[data-game]").forEach(card => {
 });
 
 createTab();
+diagnosticLog("START", "Forknut diagnostic mode enabled");
 setStatus("Ready");
