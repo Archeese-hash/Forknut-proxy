@@ -1,700 +1,547 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
-
-<title>Forknut Proxy</title>
-
-<style>
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  width: 100%;
-  height: 100%;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0b1020;
-  color: #f7f8ff;
-  overflow: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: grid;
-  place-items: center;
-}
-
-/* HOME */
-
-.wrap {
-  width: min(760px, 92vw);
-  text-align: center;
-  position: relative;
-  z-index: 2;
-}
-
-.logo {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: .5px;
-  margin-bottom: 55px;
-}
-
-.logo span {
-  display: inline-block;
-  background: #6d5dfc;
-  padding: 8px 10px;
-  border-radius: 10px;
-  margin-right: 8px;
-}
-
-h1 {
-  font-size: clamp(38px, 7vw, 68px);
-  margin: 0 0 16px;
-  line-height: 1.02;
-}
-
-p {
-  color: #aeb6cf;
-  font-size: 18px;
-  margin: 0 auto 34px;
-  max-width: 600px;
-}
-
-form {
-  display: flex;
-  background: #151c31;
-  border: 1px solid #2b3552;
-  border-radius: 16px;
-  padding: 7px;
-  box-shadow: 0 18px 60px #0006;
-}
-
-input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  color: white;
-  font-size: 16px;
-  padding: 15px;
-}
-
-button {
-  border: 0;
-  border-radius: 11px;
-  padding: 13px 24px;
-  background: #6d5dfc;
-  color: white;
-  font-weight: 750;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-button:hover {
-  filter: brightness(1.08);
-}
-
-.note {
-  font-size: 13px;
-  color: #77819d;
-  margin-top: 18px;
-}
-
-.note strong {
-  display: block;
-  font-size: 20px;
-  color: #aeb6cf;
-  margin-bottom: 6px;
-}
-
-#status {
-  font-size: 13px;
-  color: #77819d;
-  margin-top: 14px;
-  min-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* PROXY */
-
-#browser {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: #fff;
-  z-index: 5;
-}
-
-#browser.active {
-  display: block;
-}
-
-.proxy-frame {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  background: #fff;
-}
-
-#homeButton {
-  display: none;
-  position: fixed;
-  right: 14px;
-  top: max(14px, env(safe-area-inset-top));
-  z-index: 50;
-  border: 1px solid #2b3552;
-  background: #151c31;
-  color: #fff;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-weight: 700;
-  box-shadow: 0 8px 30px #0006;
-}
-
-#homeButton.visible {
-  display: block;
-}
-
-.hidden {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* SIDE TABS */
-
-.sideTab {
-  position: fixed;
-  left: 0;
-  z-index: 30;
-
-  background: #151c31;
-  color: white;
-
-  border: 1px solid #2b3552;
-  border-left: 0;
-
-  border-radius: 0 14px 14px 0;
-
-  padding: 13px 10px;
-
-  font-size: 14px;
-  font-weight: 800;
-
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-
-  cursor: pointer;
-
-  box-shadow: 0 8px 30px #0007;
-}
-
-.sideTab:hover {
-  background: #6d5dfc;
-}
-
-#gamesTab {
-  top: calc(50% - 65px);
-  transform: translateY(-50%);
-}
-
-#pointercrateTab {
-  top: calc(50% + 75px);
-  transform: translateY(-50%);
-}
-
-/* GAMES PANEL */
-
-#gamesPanel {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-
-  width: min(390px, 88vw);
-
-  background: #0d1325;
-
-  border-right: 1px solid #2b3552;
-
-  z-index: 40;
-
-  transform: translateX(-105%);
-
-  transition: transform .25s ease;
-
-  box-shadow: 15px 0 50px #0009;
-
-  overflow-y: auto;
-}
-
-#gamesPanel.open {
-  transform: translateX(0);
-}
-
-.gamesHeader {
-  position: sticky;
-  top: 0;
-
-  background: #0d1325;
-
-  padding: 20px;
-
-  border-bottom: 1px solid #252e49;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  z-index: 2;
-}
-
-.gamesTitle {
-  font-size: 24px;
-  font-weight: 850;
-}
-
-.gamesSubtitle {
-  color: #7f89a5;
-  font-size: 13px;
-  margin-top: 3px;
-}
-
-#closeGames {
-  background: #1a2239;
-  border: 1px solid #303a58;
-
-  width: 40px;
-  height: 40px;
-
-  padding: 0;
-
-  border-radius: 12px;
-
-  font-size: 20px;
-}
-
-/* GAME GRID */
-
-.gamesGrid {
-  padding: 16px;
-
-  display: grid;
-
-  grid-template-columns: repeat(2, 1fr);
-
-  gap: 12px;
-}
-
-.gameCard {
-  min-height: 120px;
-
-  border: 1px solid #303a58;
-
-  border-radius: 15px;
-
-  padding: 14px;
-
-  background: linear-gradient(
-    145deg,
-    #1a2239,
-    #11182b
-  );
-
-  color: white;
-
-  text-align: left;
-
-  cursor: pointer;
-
-  transition:
-    transform .15s ease,
-    border-color .15s ease;
-}
-
-.gameCard:hover {
-  transform: translateY(-2px);
-  border-color: #6d5dfc;
-}
-
-.gameEmoji {
-  font-size: 30px;
-  margin-bottom: 10px;
-}
-
-.gameName {
-  font-size: 15px;
-  font-weight: 800;
-}
-
-.gameType {
-  color: #7f89a5;
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-/* MOBILE */
-
-@media(max-width:560px) {
-
-  form {
-    padding: 6px;
-  }
-
-  button {
-    padding: 12px 16px;
-  }
-
-  input {
-    font-size: 15px;
-  }
-
-  .logo {
-    margin-bottom: 40px;
-  }
-
-  .gamesGrid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-</style>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Forknut Proxy</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #09070d;
+      color: white;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Browser tab bar */
+
+    #tabBar {
+      height: 52px;
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 8px;
+      background: #15121b;
+      border-bottom: 1px solid #30283b;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    #tabs {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      height: 100%;
+      min-width: 0;
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .tab {
+      height: 38px;
+      min-width: 145px;
+      max-width: 230px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px 0 12px;
+      border-radius: 10px;
+      background: #211c29;
+      color: #aaa2b5;
+      cursor: pointer;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .tab.active {
+      background: #30263c;
+      color: white;
+    }
+
+    .tab-title {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 14px;
+    }
+
+    .tab-close {
+      width: 26px;
+      height: 26px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: #aaa2b5;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .tab-close:hover {
+      background: #453650;
+      color: white;
+    }
+
+    #newTabButton {
+      width: 38px;
+      height: 38px;
+      flex-shrink: 0;
+      border: 0;
+      border-radius: 9px;
+      background: #30263c;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    #newTabButton:hover {
+      background: #4d3b60;
+    }
+
+    /* Main area */
+
+    #main {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Home screen */
+
+    #shell {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 30px 18px;
+      background:
+        radial-gradient(
+          circle at top,
+          #241631 0%,
+          #0d0912 45%,
+          #09070d 100%
+        );
+    }
+
+    #shell.hidden {
+      display: none;
+    }
+
+    .home {
+      max-width: 850px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 42px;
+      font-weight: 800;
+      margin-top: 35px;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #aaa0b5;
+      margin-bottom: 28px;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 8px;
+      max-width: 700px;
+      margin: 0 auto 25px;
+    }
+
+    #url {
+      flex: 1;
+      min-width: 0;
+      height: 48px;
+      border: 1px solid #40364c;
+      border-radius: 12px;
+      outline: none;
+      padding: 0 16px;
+      background: #17131d;
+      color: white;
+      font-size: 16px;
+    }
+
+    #url:focus {
+      border-color: #8b5fc7;
+    }
+
+    #proxyForm button {
+      height: 48px;
+      padding: 0 20px;
+      border: 0;
+      border-radius: 12px;
+      background: #7545a8;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #proxyForm button:hover {
+      background: #8c5cc0;
+    }
+
+    #status {
+      min-height: 20px;
+      color: #aaa0b5;
+      font-size: 13px;
+      margin-bottom: 25px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Side buttons */
+
+    .side-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .side-button {
+      border: 1px solid #40364c;
+      background: #17131d;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .side-button:hover {
+      background: #2a2034;
+    }
+
+    /* Games */
+
+    .section-title {
+      margin: 25px 0 14px;
+      font-size: 22px;
+    }
+
+    .games {
+      display: grid;
+      grid-template-columns:
+        repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+
+    .game-card {
+      border: 1px solid #30283b;
+      background: #15121b;
+      color: white;
+      border-radius: 12px;
+      padding: 16px 10px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .game-card:hover {
+      background: #251d30;
+      border-color: #61477c;
+    }
+
+    .credit {
+      margin-top: 35px;
+      color: #716a78;
+      font-size: 13px;
+    }
+
+    /* Browser */
+
+    #browser {
+      position: absolute;
+      inset: 0;
+      display: none;
+      background: #000;
+    }
+
+    #browser.active {
+      display: block;
+    }
+
+    .proxy-frame,
+    .youtube-frame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #000;
+    }
+
+    /* Home button */
+
+    #homeButton {
+      position: absolute;
+      z-index: 100;
+      left: 12px;
+      top: 12px;
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 10px;
+      background: rgba(25, 20, 32, 0.92);
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      display: none;
+    }
+
+    #homeButton.visible {
+      display: block;
+    }
+
+    #homeButton:hover {
+      background: #49355b;
+    }
+
+    @media (max-width: 600px) {
+      .logo {
+        font-size: 34px;
+      }
+
+      .search-box {
+        flex-direction: column;
+      }
+
+      #proxyForm button {
+        width: 100%;
+      }
+
+      .tab {
+        min-width: 125px;
+      }
+    }
+  </style>
+
+  <script src="/scramjet/scramjet.js"></script>
+  <script src="/controller/controller.api.js"></script>
+  <script src="/utils/scramjet-utils.js"></script>
 </head>
 
 <body>
 
-<!-- HOME -->
+  <!-- Browser tabs -->
 
-<main class="wrap" id="shell">
+  <div id="tabBar">
 
-  <div class="logo">
-    <span>✦</span>
-    Forknut Proxy
-  </div>
-
-  <h1>Browse the web simply.</h1>
-
-  <p>
-    Enter a website address below.
-  </p>
-
-  <form id="proxyForm">
-
-    <input
-      id="url"
-      type="text"
-      placeholder="https://example.com"
-      autocomplete="off"
-      autocapitalize="none"
-      spellcheck="false"
-      required
-    >
-
-    <button type="submit">
-      Go
-    </button>
-
-  </form>
-
-  <div class="note">
-    <strong>Made by Archie Faulkner</strong>
-    Forknut Proxy
-  </div>
-
-  <div id="status" aria-live="polite">
-    Ready
-  </div>
-
-</main>
-
-
-<!-- GAMES TAB -->
-
-<button
-  id="gamesTab"
-  class="sideTab"
-  type="button"
->
-  🎮 Games
-</button>
-
-
-<!-- POINTERCRATE TAB -->
-
-<button
-  id="pointercrateTab"
-  class="sideTab"
-  type="button"
->
-  👹 Pointercrate
-</button>
-
-
-<!-- GAMES PANEL -->
-
-<aside id="gamesPanel">
-
-  <div class="gamesHeader">
-
-    <div>
-      <div class="gamesTitle">
-        🎮 Games
-      </div>
-
-      <div class="gamesSubtitle">
-        Pick a game and play
-      </div>
-    </div>
+    <div id="tabs"></div>
 
     <button
-      id="closeGames"
+      id="newTabButton"
       type="button"
+      title="New tab"
     >
-      ×
+      +
     </button>
 
   </div>
 
+  <div id="main">
 
-  <div class="gamesGrid">
+    <!-- Home screen -->
 
-    <button
-      class="gameCard"
-      data-url="https://playslope.io/"
-    >
-      <div class="gameEmoji">⚽</div>
-      <div class="gameName">Slope</div>
-      <div class="gameType">Arcade</div>
-    </button>
+    <section id="shell">
 
+      <div class="home">
 
-    <button
-      class="gameCard"
-      data-url="https://play2048.co/"
-    >
-      <div class="gameEmoji">🔢</div>
-      <div class="gameName">2048</div>
-      <div class="gameType">Puzzle</div>
-    </button>
+        <div class="logo">
+          Forknut
+        </div>
 
+        <div class="subtitle">
+          Forknut Proxy
+        </div>
 
-    <button
-      class="gameCard"
-      data-url="https://cookieclicker.com/"
-    >
-      <div class="gameEmoji">🍪</div>
-      <div class="gameName">Cookie Clicker</div>
-      <div class="gameType">Clicker</div>
-    </button>
+        <form
+          id="proxyForm"
+          class="search-box"
+        >
+          <input
+            id="url"
+            type="text"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="Enter a website or search"
+          >
 
+          <button type="submit">
+            Go
+          </button>
+        </form>
 
-    <button
-      class="gameCard"
-      data-url="https://tetris.com/play-tetris"
-    >
-      <div class="gameEmoji">🧱</div>
-      <div class="gameName">Tetris</div>
-      <div class="gameType">Puzzle</div>
-    </button>
+        <div id="status">
+          Ready
+        </div>
 
+        <div class="side-buttons">
 
-    <button
-      class="gameCard"
-      data-url="https://run3.io/"
-    >
-      <div class="gameEmoji">🏃</div>
-      <div class="gameName">Run 3</div>
-      <div class="gameType">Runner</div>
-    </button>
+          <button
+            class="side-button"
+            id="gamesButton"
+            type="button"
+          >
+            🎮 Games
+          </button>
 
+          <button
+            class="side-button"
+            id="pointercrateButton"
+            type="button"
+          >
+            Geometry Dash Demonlist
+          </button>
 
-    <button
-      class="gameCard"
-      data-url="https://geometrydash.io/"
-    >
-      <div class="gameEmoji">🔺</div>
-      <div class="gameName">Geometry Dash</div>
-      <div class="gameType">Platformer</div>
-    </button>
+        </div>
 
+        <div id="gamesSection">
 
-    <button
-      class="gameCard"
-      data-url="https://drifthunters.io/"
-    >
-      <div class="gameEmoji">🏎️</div>
-      <div class="gameName">Drift Hunters</div>
-      <div class="gameType">Racing</div>
-    </button>
+          <div class="section-title">
+            Games
+          </div>
 
+          <div class="games">
 
-    <button
-      class="gameCard"
-      data-url="https://motox3m.io/"
-    >
-      <div class="gameEmoji">🏍️</div>
-      <div class="gameName">Moto X3M</div>
-      <div class="gameType">Racing</div>
-    </button>
+            <button
+              class="game-card"
+              data-game="https://slopegame.io/"
+            >
+              Slope
+            </button>
 
+            <button
+              class="game-card"
+              data-game="https://play2048.co/"
+            >
+              2048
+            </button>
 
-    <button
-      class="gameCard"
-      data-url="https://stickmanhook.io/"
-    >
-      <div class="gameEmoji">🪝</div>
-      <div class="gameName">Stickman Hook</div>
-      <div class="gameType">Action</div>
-    </button>
+            <button
+              class="game-card"
+              data-game="https://orteil.dashnet.org/cookieclicker/"
+            >
+              Cookie Clicker
+            </button>
 
+            <button
+              class="game-card"
+              data-game="https://tetris.com/play-tetris"
+            >
+              Tetris
+            </button>
 
-    <button
-      class="gameCard"
-      data-url="https://snowrider3d.com/"
-    >
-      <div class="gameEmoji">🏂</div>
-      <div class="gameName">Snow Rider 3D</div>
-      <div class="gameType">3D</div>
-    </button>
+            <button
+              class="game-card"
+              data-game="https://www.coolmathgames.com/0-run-3"
+            >
+              Run 3
+            </button>
 
+            <button
+              class="game-card"
+              data-game="https://www.crazygames.com/game/geometry-dash"
+            >
+              Geometry Dash
+            </button>
 
-    <button
-      class="gameCard"
-      data-url="https://basketballstars.io/"
-    >
-      <div class="gameEmoji">🏀</div>
-      <div class="gameName">Basketball Stars</div>
-      <div class="gameType">Sports</div>
-    </button>
+            <button
+              class="game-card"
+              data-game="https://www.drifthunters2.com/"
+            >
+              Drift Hunters
+            </button>
 
+            <button
+              class="game-card"
+              data-game="https://motox3m.io/"
+            >
+              Moto X3M
+            </button>
 
-    <button
-      class="gameCard"
-      data-url="https://flappybird.io/"
-    >
-      <div class="gameEmoji">🐦</div>
-      <div class="gameName">Flappy Bird</div>
-      <div class="gameType">Arcade</div>
-    </button>
+            <button
+              class="game-card"
+              data-game="https://www.coolmathgames.com/0-stickman-hook"
+            >
+              Stickman Hook
+            </button>
+
+            <button
+              class="game-card"
+              data-game="https://snowrider3d.com/"
+            >
+              Snow Rider 3D
+            </button>
+
+            <button
+              class="game-card"
+              data-game="https://www.crazygames.com/game/basketball-stars"
+            >
+              Basketball Stars
+            </button>
+
+            <button
+              class="game-card"
+              data-game="https://flappybird.io/"
+            >
+              Flappy Bird
+            </button>
+
+          </div>
+
+        </div>
+
+        <div class="credit">
+          Made by Archie Faulkner
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Proxy browser -->
+
+    <section id="browser">
+
+      <button
+        id="homeButton"
+        type="button"
+        title="Home"
+      >
+        🏠
+      </button>
+
+    </section>
 
   </div>
 
-</aside>
-
-
-<!-- PROXY BROWSER -->
-
-<div
-  id="browser"
-  aria-label="Forknut Proxy browser"
-></div>
-
-
-<button
-  id="homeButton"
-  type="button"
->
-  ← Home
-</button>
-
-
-<!-- SCRAMJET -->
-
-<script src="/scramjet/scramjet.js"></script>
-
-<script src="/controller/controller.api.js"></script>
-
-<script src="/utils/scramjet-utils.js"></script>
-
-<script src="/app.js"></script>
-
-
-<!-- BUTTON LOGIC -->
-
-<script>
-
-const gamesTab =
-  document.getElementById("gamesTab");
-
-const gamesPanel =
-  document.getElementById("gamesPanel");
-
-const closeGames =
-  document.getElementById("closeGames");
-
-const pointercrateTab =
-  document.getElementById("pointercrateTab");
-
-const urlInput =
-  document.getElementById("url");
-
-const proxyForm =
-  document.getElementById("proxyForm");
-
-
-/* OPEN GAMES */
-
-gamesTab.addEventListener("click", () => {
-
-  gamesPanel.classList.add("open");
-
-});
-
-
-/* CLOSE GAMES */
-
-closeGames.addEventListener("click", () => {
-
-  gamesPanel.classList.remove("open");
-
-});
-
-
-/* GAME BUTTONS */
-
-document
-  .querySelectorAll(".gameCard")
-  .forEach(card => {
-
-    card.addEventListener("click", () => {
-
-      const url =
-        card.getAttribute("data-url");
-
-      gamesPanel.classList.remove("open");
-
-      urlInput.value = url;
-
-      proxyForm.requestSubmit();
-
-    });
-
-  });
-
-
-/* POINTERCRATE */
-
-pointercrateTab.addEventListener(
-  "click",
-  () => {
-
-    urlInput.value =
-      "https://pointercrate.com/demonlist/";
-
-    proxyForm.requestSubmit();
-
-  }
-);
-
-</script>
+  <script src="/app.js"></script>
 
 </body>
 </html>
