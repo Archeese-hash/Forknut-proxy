@@ -293,30 +293,74 @@ function showYouTubePlayer(tab, videoId) {
 
 // Automatic image fallback for iPad/WebKit. If Scramjet cannot deliver an
 // image resource, retry the original URL through Forknut's server proxy.
-function extractOriginalUrl(scramjetUrl) {
-  const value = String(scramjetUrl || "");
+function extractOriginalUrl(value) {
+  let text = String(value || "");
+  const candidates = [];
 
-  const encoded = value.match(/((?:https?|ftp)%3A%2F%2F[^?#\s]+)/i);
-  if (encoded) {
-    try { return decodeURIComponent(encoded[1]); } catch {}
+  // Google Images and Scramjet can encode the real image URL several times.
+  // Decode repeatedly, then collect every absolute URL we can find.
+  for (let pass = 0; pass < 4; pass++) {
+    const urlMatches = text.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+    for (const item of urlMatches) {
+      try {
+        candidates.push(new URL(item.replace(/[),;]+$/, "")).href);
+      } catch {}
+    }
+
+    try {
+      const decoded = decodeURIComponent(text);
+      if (decoded === text) break;
+      text = decoded;
+    } catch {
+      break;
+    }
   }
 
-  try {
-    const decoded = decodeURIComponent(value);
-    const marker = decoded.match(/((?:https?|ftp):\/\/[^?#\s]+)/i);
-    return marker ? marker[1] : "";
-  } catch {
-    return "";
+  // Prefer explicit image URL parameters used by Google image results.
+  for (const value of [text, String(value || "")]) {
+    try {
+      const parsed = new URL(value, location.href);
+      for (const key of ["imgurl", "mediaurl", "image_url", "url", "src", "u"]) {
+        const candidate = parsed.searchParams.get(key);
+        if (candidate && /^https?:\/\//i.test(candidate)) {
+          candidates.unshift(candidate);
+        }
+      }
+    } catch {}
   }
+
+  // Use the last useful URL. Scramjet normally puts the original target at
+  // the end of its rewritten URL. Never send Forknut's own URL upstream.
+  const ownHost = String(location.hostname || "").toLowerCase();
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    try {
+      const parsed = new URL(candidates[i]);
+      const host = parsed.hostname.toLowerCase();
+      if (host && host !== ownHost && !host.endsWith(".onrender.com")) {
+        return parsed.href;
+      }
+    } catch {}
+  }
+
+  return "";
+}
+
+function forknetImageEndpoint(original) {
+  // IMPORTANT: this code may be inspecting an iframe whose document URL is
+  // google.com/pointercrate.com. The fallback endpoint must always go to the
+  // actual Forknut app origin, not the proxied site's origin.
+  const endpoint = new URL("/__forknut/image", window.location.origin);
+  endpoint.searchParams.set("url", original);
+  return endpoint.href;
 }
 
 function fallbackImageThroughServer(img) {
   if (!img || img.dataset.forknutFallback === "1") return;
-  const current = img.currentSrc || img.src || "";
+  const current = img.getAttribute("src") || img.currentSrc || img.src || "";
   const original = extractOriginalUrl(current);
   if (!original || !/^https?:\/\//i.test(original)) return;
   img.dataset.forknutFallback = "1";
-  img.src = "/__forknut/image?url=" + encodeURIComponent(original);
+  img.src = forknetImageEndpoint(original);
 }
 
 function watchImage(img) {
