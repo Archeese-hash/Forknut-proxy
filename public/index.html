@@ -1,79 +1,184 @@
-255, 255, 0.035);
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#050509"
+  >
+
+  <title>Forknut Proxy</title>
+
+  <style>
+
+    /* =========================================
+       RESET
+       ========================================= */
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      overflow: hidden;
+
+      background: #050509;
+
+      color: white;
+
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+
+    /* =========================================
+       MOVING BACKGROUND
+       ========================================= */
+
+    .background {
+      position: fixed;
+
+      inset: 0;
+
+      overflow: hidden;
+
+      pointer-events: none;
+
+      z-index: 0;
+
+      background:
+        radial-gradient(
+          circle at 50% 20%,
+          #171727 0%,
+          #09090f 45%,
+          #050509 100%
+        );
+    }
+
+
+    .bubble {
+      position: absolute;
+
+      border-radius: 50%;
+
+      background:
+        rgba(255, 255, 255, 0.035);
+
       filter: blur(1px);
+
       animation:
         floatBubble 18s infinite ease-in-out;
     }
 
+
     .bubble:nth-child(1) {
       width: 180px;
       height: 180px;
+
       left: 5%;
       top: 20%;
+
       animation-delay: -2s;
     }
+
 
     .bubble:nth-child(2) {
       width: 260px;
       height: 260px;
+
       right: 5%;
       top: 10%;
+
       animation-delay: -7s;
     }
+
 
     .bubble:nth-child(3) {
       width: 140px;
       height: 140px;
+
       left: 35%;
       bottom: 5%;
+
       animation-delay: -12s;
     }
+
 
     .bubble:nth-child(4) {
       width: 220px;
       height: 220px;
+
       right: 25%;
       bottom: 15%;
+
       animation-delay: -4s;
     }
 
+
     @keyframes floatBubble {
+
       0% {
-        transform: translate3d(0, 0, 0) scale(1);
+        transform:
+          translate3d(0, 0, 0)
+          scale(1);
       }
 
       50% {
-        transform: translate3d(
-          35px,
-          -45px,
-          0
-        ) scale(1.08);
+        transform:
+          translate3d(35px, -45px, 0)
+          scale(1.08);
       }
 
       100% {
-        transform: translate3d(0, 0, 0) scale(1);
+        transform:
+          translate3d(0, 0, 0)
+          scale(1);
       }
+
     }
 
-    /* =========================
+
+    /* =========================================
        APP
-       ========================= */
+       ========================================= */
 
     #app {
       position: relative;
+
       z-index: 1;
 
       width: 100%;
       height: 100%;
 
       display: flex;
+
       flex-direction: column;
 
       overflow: hidden;
     }
 
-    /* =========================
+
+    /* =========================================
        TOP BAR
-       ========================= */
+       ========================================= */
 
     .topbar {
       flex: 0 0 auto;
@@ -85,70 +190,92 @@
         12px
         10px;
 
-      background: rgba(5, 5, 9, 0.88);
+      background:
+        rgba(5, 5, 9, 0.88);
 
       backdrop-filter: blur(20px);
+
       -webkit-backdrop-filter: blur(20px);
 
       border-bottom:
-        1px solid rgba(255, 255, 255, 0.08);
+        1px solid
+        rgba(255, 255, 255, 0.08);
 
       position: relative;
+
       z-index: 20;
     }
 
+
     .brand {
       display: flex;
+
       align-items: center;
+
       gap: 9px;
 
       margin-bottom: 9px;
 
       font-size: 20px;
+
       font-weight: 800;
+
       letter-spacing: -0.4px;
     }
+
 
     .brand-dot {
       width: 11px;
       height: 11px;
+
+      flex: 0 0 auto;
 
       border-radius: 50%;
 
       background: white;
 
       box-shadow:
-        0 0 12px rgba(255, 255, 255, 0.65);
+        0 0 12px
+        rgba(255, 255, 255, 0.65);
     }
+
 
     .subtitle {
       margin-left: 20px;
 
       margin-top: -6px;
+
       margin-bottom: 10px;
 
-      color: rgba(255, 255, 255, 0.45);
+      color:
+        rgba(255, 255, 255, 0.45);
 
       font-size: 11px;
     }
 
-    /* =========================
+
+    /* =========================================
        SEARCH
-       ========================= */
+       ========================================= */
 
     .search {
       display: flex;
+
       width: 100%;
+
       gap: 7px;
     }
 
+
     .search input {
       min-width: 0;
+
       flex: 1;
 
       height: 42px;
 
-      border: 1px solid
+      border:
+        1px solid
         rgba(255, 255, 255, 0.12);
 
       border-radius: 13px;
@@ -168,10 +295,12 @@
       -webkit-appearance: none;
     }
 
+
     .search input::placeholder {
       color:
         rgba(255, 255, 255, 0.38);
     }
+
 
     .search input:focus {
       border-color:
@@ -180,6 +309,7 @@
       background:
         rgba(255, 255, 255, 0.09);
     }
+
 
     .search button {
       flex: 0 0 auto;
@@ -198,6 +328,7 @@
       color: #050509;
 
       font-size: 14px;
+
       font-weight: 750;
 
       cursor: pointer;
@@ -206,12 +337,14 @@
         transparent;
     }
 
-    /* =========================
+
+    /* =========================================
        TABS
-       ========================= */
+       ========================================= */
 
     .tabs-row {
       display: flex;
+
       align-items: center;
 
       gap: 6px;
@@ -219,6 +352,7 @@
       margin-top: 9px;
 
       overflow-x: auto;
+
       overflow-y: hidden;
 
       scrollbar-width: none;
@@ -226,12 +360,15 @@
       -webkit-overflow-scrolling: touch;
     }
 
+
     .tabs-row::-webkit-scrollbar {
       display: none;
     }
 
+
     #tabs {
       display: flex;
+
       align-items: center;
 
       gap: 6px;
@@ -241,6 +378,7 @@
       flex: 1;
 
       overflow-x: auto;
+
       overflow-y: hidden;
 
       scrollbar-width: none;
@@ -248,17 +386,21 @@
       -webkit-overflow-scrolling: touch;
     }
 
+
     #tabs::-webkit-scrollbar {
       display: none;
     }
+
 
     .tab {
       flex: 0 0 auto;
 
       display: flex;
+
       align-items: center;
 
       min-width: 105px;
+
       max-width: 190px;
 
       height: 34px;
@@ -287,6 +429,7 @@
         transparent;
     }
 
+
     .tab.active {
       background:
         rgba(255, 255, 255, 0.11);
@@ -297,18 +440,23 @@
         rgba(255, 255, 255, 0.15);
     }
 
+
     .tab-title {
       min-width: 0;
+
       flex: 1;
 
       overflow: hidden;
 
       white-space: nowrap;
+
       text-overflow: ellipsis;
 
       font-size: 12px;
+
       font-weight: 650;
     }
+
 
     .tab-close {
       width: 25px;
@@ -317,19 +465,21 @@
       padding: 0;
 
       border: 0;
+
       border-radius: 7px;
 
-      background:
-        transparent;
+      background: transparent;
 
       color:
         rgba(255, 255, 255, 0.48);
 
       font-size: 18px;
+
       line-height: 25px;
 
       cursor: pointer;
     }
+
 
     .tab-close:active {
       background:
@@ -338,13 +488,15 @@
       color: white;
     }
 
+
     #newTabButton {
       flex: 0 0 auto;
 
       width: 34px;
       height: 34px;
 
-      border: 1px solid
+      border:
+        1px solid
         rgba(255, 255, 255, 0.09);
 
       border-radius: 10px;
@@ -359,9 +511,10 @@
       cursor: pointer;
     }
 
-    /* =========================
-       CONTENT
-       ========================= */
+
+    /* =========================================
+       MAIN CONTENT
+       ========================================= */
 
     #content {
       position: relative;
@@ -373,15 +526,18 @@
       overflow: hidden;
     }
 
-    /* =========================
+
+    /* =========================================
        HOME
-       ========================= */
+       ========================================= */
 
     #shell {
       position: absolute;
+
       inset: 0;
 
       overflow-y: auto;
+
       overflow-x: hidden;
 
       padding:
@@ -396,11 +552,15 @@
         visibility 0.2s ease;
     }
 
+
     #shell.hidden {
       opacity: 0;
+
       visibility: hidden;
+
       pointer-events: none;
     }
+
 
     .hero {
       width: min(700px, 100%);
@@ -412,14 +572,17 @@
       text-align: center;
     }
 
+
     .hero h1 {
-      margin: 0 0 10px;
+      margin:
+        0 0 10px;
 
       font-size:
         clamp(30px, 8vw, 48px);
 
       letter-spacing: -1.5px;
     }
+
 
     .hero p {
       margin: 0 auto;
@@ -433,6 +596,7 @@
 
       font-size: 14px;
     }
+
 
     .quick-buttons {
       display: grid;
@@ -449,10 +613,12 @@
         22px;
     }
 
+
     .quick-button {
       min-height: 48px;
 
-      border: 1px solid
+      border:
+        1px solid
         rgba(255, 255, 255, 0.09);
 
       border-radius: 14px;
@@ -467,12 +633,14 @@
       cursor: pointer;
     }
 
+
     .quick-button:active {
       transform: scale(0.98);
 
       background:
         rgba(255, 255, 255, 0.11);
     }
+
 
     .games-title {
       width: min(700px, 100%);
@@ -481,14 +649,17 @@
         28px auto 12px;
 
       font-size: 17px;
+
       font-weight: 800;
     }
+
 
     #gamesSection {
       width: min(700px, 100%);
 
       margin: 0 auto;
     }
+
 
     .games {
       display: grid;
@@ -499,11 +670,14 @@
       gap: 10px;
     }
 
+
     .game-card {
       min-height: 82px;
 
       display: flex;
+
       flex-direction: column;
+
       justify-content: center;
 
       padding: 15px;
@@ -523,6 +697,7 @@
         transparent;
     }
 
+
     .game-card:active {
       transform: scale(0.98);
 
@@ -530,10 +705,13 @@
         rgba(255, 255, 255, 0.09);
     }
 
+
     .game-name {
       font-size: 15px;
+
       font-weight: 800;
     }
+
 
     .game-url {
       margin-top: 5px;
@@ -544,9 +722,10 @@
       font-size: 11px;
     }
 
-    /* =========================
-       BROWSER
-       ========================= */
+
+    /* =========================================
+       BROWSER / IFRAMES
+       ========================================= */
 
     #browser {
       position: absolute;
@@ -557,36 +736,43 @@
 
       overflow: hidden;
 
-      background: #fff;
+      background: #ffffff;
 
       /*
-       * Important:
-       * The iframe is isolated from the dark UI.
-       * This prevents the parent background from making
-       * transparent iframe areas look like black media.
+       * Separate the proxied website from the
+       * Forknut background compositor.
        */
+
       isolation: isolate;
 
       contain: strict;
 
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
+      transform:
+        translateZ(0);
+
+      -webkit-transform:
+        translateZ(0);
+
+      z-index: 5;
     }
+
 
     #browser.active {
       display: block;
     }
 
+
     /*
-     * Proxy iframe
+     * Scramjet iframe
      *
-     * Do NOT use opacity.
-     * Do NOT use mix-blend-mode.
-     * Do NOT use filters.
-     * Do NOT use background transparency.
-     *
-     * These can cause compositing problems on iPad/Safari/WebKit.
+     * Important for iPad/WebKit:
+     * - fully opaque
+     * - no filter
+     * - no blend mode
+     * - no opacity animation
+     * - full viewport size
      */
+
     .proxy-frame {
       position: absolute;
 
@@ -595,21 +781,28 @@
       display: block;
 
       width: 100%;
+
       height: 100%;
 
       min-width: 100%;
+
       min-height: 100%;
 
       border: 0;
 
       margin: 0;
+
       padding: 0;
 
-      background: white;
+      background: #ffffff;
 
       opacity: 1;
 
       visibility: visible;
+
+      filter: none;
+
+      mix-blend-mode: normal;
 
       transform:
         translate3d(0, 0, 0);
@@ -617,27 +810,14 @@
       -webkit-transform:
         translate3d(0, 0, 0);
 
-      backface-visibility: visible;
-      -webkit-backface-visibility: visible;
-
-      filter: none;
-
-      mix-blend-mode: normal;
-
-      color-scheme: light;
-
-      /*
-       * The iframe itself must be allowed to create
-       * a normal browser compositing layer.
-       */
-      will-change: auto;
-
-      z-index: 1;
+      z-index: 10;
     }
 
+
     /*
-     * YouTube frame
+     * YouTube iframe
      */
+
     .youtube-frame {
       position: absolute;
 
@@ -646,21 +826,28 @@
       display: block;
 
       width: 100%;
+
       height: 100%;
 
       min-width: 100%;
+
       min-height: 100%;
 
       border: 0;
 
       margin: 0;
+
       padding: 0;
 
-      background: #000;
+      background: #000000;
 
       opacity: 1;
 
       visibility: visible;
+
+      filter: none;
+
+      mix-blend-mode: normal;
 
       transform:
         translate3d(0, 0, 0);
@@ -668,33 +855,33 @@
       -webkit-transform:
         translate3d(0, 0, 0);
 
-      filter: none;
-
-      mix-blend-mode: normal;
-
-      z-index: 2;
+      z-index: 20;
     }
 
-    /*
-     * This makes sure browser frames never accidentally
-     * inherit the app's dark visual effects.
-     */
+
     #browser iframe {
+      display: block;
+
       color-scheme: light;
     }
 
-    /* =========================
+
+    /* =========================================
        HOME BUTTON
-       ========================= */
+       ========================================= */
 
     #homeButton {
       position: absolute;
 
       left: 12px;
-      bottom:
-        calc(12px + env(safe-area-inset-bottom));
 
-      z-index: 30;
+      bottom:
+        calc(
+          12px +
+          env(safe-area-inset-bottom)
+        );
+
+      z-index: 50;
 
       display: none;
 
@@ -703,7 +890,8 @@
       padding:
         0 15px;
 
-      border: 1px solid
+      border:
+        1px solid
         rgba(0, 0, 0, 0.15);
 
       border-radius: 12px;
@@ -725,13 +913,15 @@
         transparent;
     }
 
+
     #homeButton.visible {
       display: block;
     }
 
-    /* =========================
+
+    /* =========================================
        STATUS
-       ========================= */
+       ========================================= */
 
     #status {
       position: fixed;
@@ -739,7 +929,10 @@
       left: 50%;
 
       bottom:
-        calc(6px + env(safe-area-inset-bottom));
+        calc(
+          6px +
+          env(safe-area-inset-bottom)
+        );
 
       transform:
         translateX(-50%);
@@ -751,6 +944,7 @@
       overflow: hidden;
 
       white-space: nowrap;
+
       text-overflow: ellipsis;
 
       color:
@@ -761,98 +955,117 @@
       pointer-events: none;
     }
 
-    /* =========================
-       IPAD / LARGE SCREENS
-       ========================= */
+
+    /* =========================================
+       LARGE SCREENS
+       ========================================= */
 
     @media (min-width: 700px) {
 
       .topbar {
         padding-left: 18px;
+
         padding-right: 18px;
       }
 
+
       .search {
         max-width: 1000px;
+
         margin: 0 auto;
       }
 
+
       .tabs-row {
         max-width: 1000px;
+
         margin-left: auto;
+
         margin-right: auto;
       }
 
+
       .subtitle {
         text-align: center;
+
         margin-left: 0;
       }
+
     }
 
-    /* =========================
+
+    /* =========================================
        SMALL SCREENS
-       ========================= */
+       ========================================= */
 
     @media (max-width: 430px) {
-
-      .quick-buttons {
-        grid-template-columns:
-          1fr 1fr;
-      }
-
-      .games {
-        grid-template-columns:
-          1fr 1fr;
-      }
 
       .hero {
         margin-top: 8px;
       }
 
+
       .hero h1 {
         font-size: 34px;
       }
+
     }
 
-    /*
-     * When the iPad keyboard opens, don't allow the app
-     * to accidentally scroll the whole document.
-     */
-    @supports (-webkit-touch-callout: none) {
-
-      input,
-      button {
-        -webkit-touch-callout: none;
-      }
-    }
   </style>
+
 </head>
+
 
 <body>
 
+  <!-- =========================================
+       BACKGROUND
+       ========================================= -->
+
   <div class="background">
+
     <div class="bubble"></div>
+
     <div class="bubble"></div>
+
     <div class="bubble"></div>
+
     <div class="bubble"></div>
+
   </div>
+
+
+  <!-- =========================================
+       APP
+       ========================================= -->
 
   <div id="app">
 
-    <!-- =====================
+
+    <!-- =======================================
          TOP BAR
-         ===================== -->
+         ======================================= -->
 
     <header class="topbar">
 
+
       <div class="brand">
+
         <span class="brand-dot"></span>
-        <span>Forknut Proxy</span>
+
+        <span>
+          Forknut Proxy
+        </span>
+
       </div>
+
 
       <div class="subtitle">
         Made by Archie Faulkner
       </div>
+
+
+      <!-- SEARCH -->
 
       <form
         id="proxyForm"
@@ -871,6 +1084,7 @@
           aria-label="Website or search"
         >
 
+
         <button
           type="submit"
         >
@@ -879,9 +1093,13 @@
 
       </form>
 
+
+      <!-- TABS -->
+
       <div class="tabs-row">
 
         <div id="tabs"></div>
+
 
         <button
           id="newTabButton"
@@ -897,21 +1115,26 @@
     </header>
 
 
-    <!-- =====================
-         MAIN CONTENT
-         ===================== -->
+    <!-- =======================================
+         CONTENT
+         ======================================= -->
 
     <main id="content">
 
-      <!-- HOME -->
+
+      <!-- =====================================
+           HOME PAGE
+           ===================================== -->
 
       <section id="shell">
+
 
         <div class="hero">
 
           <h1>
             Forknut
           </h1>
+
 
           <p>
             Browse the web through Forknut Proxy.
@@ -922,7 +1145,10 @@
         </div>
 
 
+        <!-- QUICK BUTTONS -->
+
         <div class="quick-buttons">
+
 
           <button
             id="pointercrateButton"
@@ -932,6 +1158,7 @@
             Pointercrate
           </button>
 
+
           <button
             id="gamesButton"
             class="quick-button"
@@ -940,8 +1167,11 @@
             Games
           </button>
 
+
         </div>
 
+
+        <!-- GAMES -->
 
         <div class="games-title">
           Games
@@ -950,19 +1180,24 @@
 
         <div id="gamesSection">
 
+
           <div class="games">
+
 
             <div
               class="game-card"
               data-game="https://geometrydash.io/"
             >
+
               <div class="game-name">
                 Geometry Dash
               </div>
 
+
               <div class="game-url">
                 geometrydash.io
               </div>
+
             </div>
 
 
@@ -970,13 +1205,16 @@
               class="game-card"
               data-game="https://shellshock.io/"
             >
+
               <div class="game-name">
                 Shell Shockers
               </div>
 
+
               <div class="game-url">
                 shellshock.io
               </div>
+
             </div>
 
 
@@ -984,13 +1222,16 @@
               class="game-card"
               data-game="https://krunker.io/"
             >
+
               <div class="game-name">
                 Krunker
               </div>
 
+
               <div class="game-url">
                 krunker.io
               </div>
+
             </div>
 
 
@@ -998,31 +1239,39 @@
               class="game-card"
               data-game="https://1v1.lol/"
             >
+
               <div class="game-name">
                 1v1.LOL
               </div>
 
+
               <div class="game-url">
                 1v1.lol
               </div>
+
             </div>
+
 
           </div>
 
         </div>
 
+
       </section>
 
 
-      <!-- =====================
-           BROWSER VIEW
-           ===================== -->
+      <!-- =====================================
+           BROWSER
+           ===================================== -->
 
       <section
         id="browser"
         aria-label="Forknut browser"
       >
       </section>
+
+
+      <!-- HOME BUTTON -->
 
       <button
         id="homeButton"
@@ -1031,42 +1280,57 @@
         ← Home
       </button>
 
+
     </main>
+
 
   </div>
 
+
+  <!-- =========================================
+       STATUS
+       ========================================= -->
 
   <div id="status">
     Starting...
   </div>
 
 
-  <!-- =====================
-       SCRAMJET CONTROLLER
-       ===================== -->
+  <!-- =========================================
+       SCRAMJET 2.x BROWSER RUNTIME
+
+       EXACT ORDER:
+
+       1. Scramjet core
+       2. Controller API
+       3. Scramjet utilities
+       4. Forknut app
+       ========================================= -->
 
   <script
-    src="/controller/controller.main.js"
+    src="/scramjet/scramjet.js"
   ></script>
 
 
-  <!-- =====================
-       SCRAMJET UTILS
-       ===================== -->
-
   <script
-    src="/utils/index.js"
+    src="/controller/controller.api.js"
   ></script>
 
 
-  <!-- =====================
+  <script
+    src="/utils/scramjet-utils.js"
+  ></script>
+
+
+  <!-- =========================================
        FORKNUT APP
-       ===================== -->
+       ========================================= -->
 
   <script
     src="/app.js"
-    defer
   ></script>
 
+
 </body>
+
 </html>
