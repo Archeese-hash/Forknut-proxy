@@ -19,48 +19,75 @@ const publicPath = path.join(
   "public"
 );
 
+
+/* -------------------------------- */
+/* Package paths */
+/* -------------------------------- */
+
 function dirOf(packageName) {
   return path.dirname(
     require.resolve(packageName)
   );
 }
 
-const controllerPath = dirOf(
-  "@mercuryworkshop/scramjet-controller"
-);
+const controllerPath =
+  dirOf(
+    "@mercuryworkshop/scramjet-controller"
+  );
 
-const utilsPath = dirOf(
-  "@mercuryworkshop/scramjet-utils"
-);
+const utilsPath =
+  dirOf(
+    "@mercuryworkshop/scramjet-utils"
+  );
 
-const libcurlPath = dirOf(
-  "@mercuryworkshop/libcurl-transport"
-);
+const libcurlPath =
+  dirOf(
+    "@mercuryworkshop/libcurl-transport"
+  );
+
+
+/* -------------------------------- */
+/* Fastify */
+/* -------------------------------- */
 
 const app = Fastify({
   logger: true,
 
   serverFactory: (handler) => {
-    const server = http.createServer(
-      handler
-    );
+
+    const server =
+      http.createServer(
+        handler
+      );
+
+
+    /* ------------------------------ */
+    /* Wisp WebSocket */
+    /* ------------------------------ */
 
     server.on(
       "upgrade",
       (req, socket, head) => {
+
         try {
+
           const pathname =
             new URL(
               req.url || "/",
               "http://localhost"
             ).pathname;
 
-          if (pathname === "/wisp/") {
+
+          if (
+            pathname === "/wisp/"
+          ) {
+
             console.log(
               "[Forknut] Wisp connection opened"
             );
 
-            req.url = "/wisp/";
+            req.url =
+              "/wisp/";
 
             wisp.routeRequest(
               req,
@@ -71,13 +98,16 @@ const app = Fastify({
             return;
           }
 
+
           console.log(
             "[Forknut] Rejected WebSocket:",
             pathname
           );
 
           socket.end();
+
         } catch (error) {
+
           console.error(
             "[Forknut] Wisp error:",
             error
@@ -88,36 +118,73 @@ const app = Fastify({
       }
     );
 
+
     return server;
   }
 });
 
-/*
- * Scramjet 2.x requires the shell to remain
- * cross-origin isolated.
- *
- * Keep these headers.
- */
+
+/* -------------------------------- */
+/* Security / cross-origin headers */
+/* -------------------------------- */
+
 app.addHook(
   "onSend",
-  async (request, reply) => {
+  async (
+    request,
+    reply
+  ) => {
+
+    /*
+     * Scramjet needs the page to remain
+     * cross-origin isolated.
+     *
+     * COOP stays the normal Scramjet value.
+     */
+
     reply.header(
       "Cross-Origin-Opener-Policy",
       "same-origin"
     );
 
-    reply.header(
-      "Cross-Origin-Embedder-Policy",
-      "require-corp"
-    );
 
     /*
-     * Prevent an old service worker from
-     * being stuck in the browser cache.
+     * IMPORTANT:
+     *
+     * We are testing credentialless instead
+     * of require-corp.
+     *
+     * This allows compatible cross-origin
+     * images/resources to load even when
+     * their original server doesn't provide
+     * a CORP header.
      */
+
+    reply.header(
+      "Cross-Origin-Embedder-Policy",
+      "credentialless"
+    );
+
+
+    /*
+     * Allow resources served by Forknut itself
+     * to be used safely by the proxy shell.
+     */
+
+    reply.header(
+      "Cross-Origin-Resource-Policy",
+      "cross-origin"
+    );
+
+
+    /*
+     * Service worker must never be cached.
+     */
+
     if (
       request.url === "/sw.js"
     ) {
+
       reply.header(
         "Cache-Control",
         "no-store, no-cache, must-revalidate"
@@ -136,90 +203,150 @@ app.addHook(
   }
 );
 
-/*
- * Scramjet core
- */
+
+/* -------------------------------- */
+/* Scramjet core */
+/* -------------------------------- */
+
 await app.register(
   fastifyStatic,
   {
-    root: scramjetPath,
-    prefix: "/scramjet/",
-    decorateReply: false
+    root:
+      scramjetPath,
+
+    prefix:
+      "/scramjet/",
+
+    decorateReply:
+      false
   }
 );
 
-/*
- * Scramjet controller
- */
+
+/* -------------------------------- */
+/* Scramjet controller */
+/* -------------------------------- */
+
 await app.register(
   fastifyStatic,
   {
-    root: controllerPath,
-    prefix: "/controller/",
-    decorateReply: false
+    root:
+      controllerPath,
+
+    prefix:
+      "/controller/",
+
+    decorateReply:
+      false
   }
 );
 
-/*
- * Scramjet utilities
- */
+
+/* -------------------------------- */
+/* Scramjet utilities */
+/* -------------------------------- */
+
 await app.register(
   fastifyStatic,
   {
-    root: utilsPath,
-    prefix: "/utils/",
-    decorateReply: false
+    root:
+      utilsPath,
+
+    prefix:
+      "/utils/",
+
+    decorateReply:
+      false
   }
 );
 
-/*
- * Libcurl transport
- */
+
+/* -------------------------------- */
+/* Libcurl transport */
+/* -------------------------------- */
+
 await app.register(
   fastifyStatic,
   {
-    root: libcurlPath,
-    prefix: "/libcurl/",
-    decorateReply: false
+    root:
+      libcurlPath,
+
+    prefix:
+      "/libcurl/",
+
+    decorateReply:
+      false
   }
 );
 
-/*
- * Forknut website
- */
+
+/* -------------------------------- */
+/* Forknut website */
+/* -------------------------------- */
+
 await app.register(
   fastifyStatic,
   {
-    root: publicPath,
-    decorateReply: false
+    root:
+      publicPath,
+
+    decorateReply:
+      false
   }
 );
 
-/*
- * Health check
- */
+
+/* -------------------------------- */
+/* Health check */
+/* -------------------------------- */
+
 app.get(
   "/health",
   async () => {
+
     return {
-      ok: true,
-      service: "Forknut Proxy",
-      scramjet: "2.0.67-alpha.2",
-      controller: "0.0.14",
-      transport: "libcurl",
-      wisp: true
+      ok:
+        true,
+
+      service:
+        "Forknut Proxy",
+
+      scramjet:
+        "2.0.67-alpha.2",
+
+      controller:
+        "0.0.14",
+
+      transport:
+        "libcurl",
+
+      wisp:
+        true,
+
+      coep:
+        "credentialless"
     };
   }
 );
 
-const port = Number(
-  process.env.PORT || 3000
-);
+
+/* -------------------------------- */
+/* Start server */
+/* -------------------------------- */
+
+const port =
+  Number(
+    process.env.PORT || 3000
+  );
+
 
 await app.listen({
-  host: "0.0.0.0",
+  host:
+    "0.0.0.0",
+
   port
 });
+
 
 console.log(
   `Forknut Proxy running on port ${port}`
