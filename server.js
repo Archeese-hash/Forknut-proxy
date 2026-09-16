@@ -109,6 +109,33 @@ forknetTransportBody instanceof ArrayBuffer ? [forknetTransportBody] : [],
 
 await prepareWebKitController();
 
+const app = Fastify({
+  logger: true,
+  serverFactory: (handler) => {
+    const server = http.createServer(handler);
+    server.on("upgrade", (req, socket, head) => {
+      try {
+        const pathname = new URL(req.url || "/", "http://localhost").pathname;
+        if (pathname === "/wisp/") {
+          wisp.routeRequest(req, socket, head);
+          return;
+        }
+        socket.end();
+      } catch (error) {
+        console.error("[Forknut] Wisp error:", error);
+        socket.end();
+      }
+    });
+    return server;
+  }
+});
+
+app.addHook("onSend", async (request, reply) => {
+  reply.header("Cross-Origin-Opener-Policy", "same-origin");
+  reply.header("Cross-Origin-Embedder-Policy", "credentialless");
+  reply.header("Cross-Origin-Resource-Policy", "cross-origin");
+});
+
 function isBlockedHostname(hostname) {
   const host = hostname.toLowerCase();
   if (host === "localhost" || host.endsWith(".localhost")) return true;
