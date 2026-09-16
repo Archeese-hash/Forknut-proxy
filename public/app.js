@@ -1,3 +1,19 @@
+const input = document.getElementById("urlInput") || document.querySelector('input[type="url"], input[name="url"], input[type="text"]');
+const form = document.getElementById("searchForm") || document.querySelector("form");
+const status = document.getElementById("status") || document.querySelector(".status");
+const browser = document.getElementById("browser");
+const shell = document.getElementById("shell");
+const homeButton = document.getElementById("homeButton");
+const tabsElement = document.getElementById("tabs") || document.querySelector(".tabs");
+const newTabButton = document.getElementById("newTabButton") || document.querySelector('[data-action="new-tab"]');
+const pointercrateButton = document.getElementById("pointercrateButton") || document.querySelector('[data-site="pointercrate"]');
+const gamesButton = document.getElementById("gamesButton") || document.querySelector('[data-action="games"]');
+
+let controller = null;
+let nextTabId = 1;
+let activeTabId = null;
+const tabs = [];
+
 function setStatus(text) {
   if (status) status.textContent = text;
 }
@@ -75,52 +91,66 @@ async function registerServiceWorker() {
   return navigator.serviceWorker.controller || registration.active;
 }
 
+let controllerPromise = null;
+
 async function getController() {
   if (controller) return controller;
+  if (controllerPromise) return controllerPromise;
 
-  setStatus("Starting Forknut...");
+  controllerPromise = (async () => {
+    setStatus("Starting proxy...");
 
-  const serviceWorker = await registerServiceWorker();
+    const serviceWorker = await registerServiceWorker();
 
-  const wispUrl =
-    (location.protocol === "https:" ? "wss" : "ws") +
-    "://" +
-    location.host +
-    "/wisp/";
+    const wispUrl =
+      (location.protocol === "https:" ? "wss" : "ws") +
+      "://" + location.host + "/wisp/";
 
-  let EpoxyClient;
-
-  try {
-    const epoxy = await import("/epoxy/index.mjs");
-    EpoxyClient = epoxy.EpoxyClient || epoxy.default;
-  } catch (error) {
-    console.error("Epoxy loading error:", error);
-    throw new Error("Forknut could not load its Epoxy transport.");
-  }
-
-  if (typeof EpoxyClient !== "function") {
-    throw new Error("Forknut loaded an invalid Epoxy transport.");
-  }
-
-  const transport = new EpoxyClient({
-    wisp: wispUrl
-  });
-
-  await transport.init();
-
-  controller = new $scramjetController.Controller({
-    serviceworker: serviceWorker,
-    transport: transport,
-    config: {
-      prefix: "/~/sj/",
-      scramjetPath: "/scramjet/scramjet.js",
-      wasmPath: "/scramjet/scramjet.wasm",
-      injectPath: "/controller/controller.inject.js"
+    let EpoxyClient;
+    try {
+      const epoxy = await import("/epoxy/index.mjs");
+      EpoxyClient = epoxy.EpoxyClient || epoxy.default;
+    } catch (error) {
+      console.error("Epoxy loading error:", error);
+      throw new Error("Forknut could not load its Epoxy transport.");
     }
+
+    if (typeof EpoxyClient !== "function") {
+      throw new Error("Forknut loaded an invalid Epoxy transport.");
+    }
+
+    const transport = new EpoxyClient({ wisp: wispUrl });
+    await Promise.race([
+      transport.init(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Epoxy took too long to start.")), 15000))
+    ]);
+
+    const instance = new $scramjetController.Controller({
+      serviceworker: serviceWorker,
+      transport: transport,
+      config: {
+        prefix: "/~/sj/",
+        scramjetPath: "/scramjet/scramjet.js",
+        wasmPath: "/scramjet/scramjet.wasm",
+        injectPath: "/controller/controller.inject.js"
+      }
+    });
+
+    await Promise.race([
+      instance.wait(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("Scramjet took too long to start. Please reload Forknut.")), 15000))
+    ]);
+
+    controller = instance;
+    setStatus("Ready");
+    return controller;
+  })().catch(error => {
+    controllerPromise = null;
+    setStatus(error?.message || "Forknut could not start.");
+    throw error;
   });
 
-  await controller.wait();
-  return controller;
+  return controllerPromise;
 }
 
 function createTab() {
@@ -455,3 +485,4 @@ document.querySelectorAll("[data-game]").forEach(card => {
 
 createTab();
 setStatus("Ready");
+if (input) input.focus();
