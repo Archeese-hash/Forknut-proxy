@@ -551,4 +551,3 @@ document.querySelectorAll("[data-game]").forEach(card => {
 createTab();
 setStatus("Ready");
 if (input) input.focus();
-
