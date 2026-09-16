@@ -1,449 +1,859 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#111111">
-
-  <title>Forknut Proxy</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #111;
-      color: white;
-      font-family: Arial, Helvetica, sans-serif;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Top browser bar */
-
-    #topbar {
-      flex-shrink: 0;
-      width: 100%;
-      background: #181818;
-      border-bottom: 1px solid #333;
-      padding:
-        env(safe-area-inset-top)
-        10px
-        8px
-        10px;
-    }
-
-    #title {
-      text-align: center;
-      font-size: 20px;
-      font-weight: bold;
-      margin: 6px 0 9px;
-    }
-
-    #searchForm {
-      display: flex;
-      gap: 7px;
-      width: 100%;
-    }
-
-    #urlInput {
-      flex: 1;
-      min-width: 0;
-      height: 44px;
-      border: 1px solid #444;
-      border-radius: 10px;
-      background: #252525;
-      color: white;
-      padding: 0 13px;
-      font-size: 16px;
-      outline: none;
-    }
-
-    #urlInput:focus {
-      border-color: #777;
-    }
-
-    #goButton {
-      width: 58px;
-      height: 44px;
-      border: 0;
-      border-radius: 10px;
-      background: #fff;
-      color: #111;
-      font-weight: bold;
-      font-size: 16px;
-    }
-
-    #goButton:active {
-      transform: scale(.97);
-    }
-
-    /* Quick buttons */
-
-    #quickButtons {
-      display: flex;
-      gap: 7px;
-      margin-top: 8px;
-      overflow-x: auto;
-      padding-bottom: 2px;
-      scrollbar-width: none;
-    }
-
-    #quickButtons::-webkit-scrollbar {
-      display: none;
-    }
-
-    .quickButton {
-      flex: 0 0 auto;
-      height: 38px;
-      padding: 0 14px;
-      border: 1px solid #444;
-      border-radius: 9px;
-      background: #242424;
-      color: white;
-      font-size: 14px;
-      white-space: nowrap;
-    }
-
-    .quickButton:active {
-      background: #333;
-    }
-
-    /* Status */
-
-    #status {
-      flex-shrink: 0;
-      min-height: 26px;
-      padding: 5px 12px;
-      background: #101010;
-      color: #aaa;
-      font-size: 12px;
-      border-bottom: 1px solid #292929;
-    }
-
-    /* Tabs */
-
-    #tabs {
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      min-height: 43px;
-      padding: 5px 7px;
-      background: #151515;
-      border-bottom: 1px solid #333;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    #tabs::-webkit-scrollbar {
-      display: none;
-    }
-
-    .tab {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      flex: 0 0 auto;
-      max-width: 180px;
-      height: 32px;
-      padding: 0 9px;
-      border: 1px solid #3c3c3c;
-      border-radius: 8px;
-      background: #242424;
-      color: #ccc;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .tab.active {
-      background: #333;
-      color: white;
-      border-color: #666;
-    }
-
-    .tabTitle {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .closeTab {
-      border: 0;
-      background: transparent;
-      color: #aaa;
-      font-size: 16px;
-      padding: 0;
-      line-height: 1;
-    }
-
-    #newTabButton {
-      flex: 0 0 auto;
-      width: 32px;
-      height: 32px;
-      border: 1px solid #444;
-      border-radius: 8px;
-      background: #222;
-      color: white;
-      font-size: 20px;
-    }
-
-    /* Browser */
-
-    #browser {
-      position: relative;
-      flex: 1;
-      min-height: 0;
-      width: 100%;
-      background: white;
-      overflow: hidden;
-    }
-
-    .browserFrame {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: 0;
-      margin: 0;
-      padding: 0;
-      background: white;
-      display: none;
-    }
-
-    .browserFrame.active {
-      display: block;
-    }
-
-    /* Home page */
-
-    .homeScreen {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background:
-        radial-gradient(circle at 50% 35%, #292929 0, #151515 35%, #101010 70%);
-      padding: 30px;
-      text-align: center;
-      overflow-y: auto;
-    }
-
-    .homeScreen.hidden {
-      display: none;
-    }
-
-    .logo {
-      font-size: 58px;
-      margin-bottom: 5px;
-    }
-
-    .homeTitle {
-      font-size: 30px;
-      font-weight: bold;
-      margin-bottom: 6px;
-    }
-
-    .homeSubtitle {
-      color: #aaa;
-      font-size: 15px;
-      margin-bottom: 24px;
-    }
-
-    .homeButtons {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 9px;
-      max-width: 500px;
-    }
-
-    .homeButton {
-      min-width: 130px;
-      padding: 13px 18px;
-      border: 1px solid #444;
-      border-radius: 10px;
-      background: #222;
-      color: white;
-      font-size: 15px;
-    }
-
-    .homeButton:active {
-      background: #333;
-    }
-
-    /* Games screen */
-
-    #gamesScreen {
-      position: absolute;
-      inset: 0;
-      display: none;
-      flex-direction: column;
-      background: #111;
-      overflow-y: auto;
-      padding: 18px;
-    }
-
-    #gamesScreen.visible {
-      display: flex;
-    }
-
-    .gamesTitle {
-      font-size: 27px;
-      font-weight: bold;
-      text-align: center;
-      margin: 5px 0 4px;
-    }
-
-    .gamesSubtitle {
-      text-align: center;
-      color: #aaa;
-      font-size: 14px;
-      margin-bottom: 18px;
-    }
-
-    .gamesGrid {
-      width: 100%;
-      max-width: 800px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .gameCard {
-      min-height: 145px;
-      padding: 18px;
-      border: 1px solid #3d3d3d;
-      border-radius: 14px;
-      background: #202020;
-      color: white;
-      text-align: left;
-    }
-
-    .gameEmoji {
-      font-size: 38px;
-      margin-bottom: 7px;
-    }
-
-    .gameName {
-      font-size: 20px;
-      font-weight: bold;
-    }
-
-    .gameDescription {
-      color: #aaa;
-      font-size: 13px;
-      margin-top: 5px;
-    }
-
-    .gamePlay {
-      margin-top: 12px;
-      padding: 9px 15px;
-      border: 0;
-      border-radius: 8px;
-      background: white;
-      color: #111;
-      font-weight: bold;
-    }
-
-    @media (max-width: 520px) {
-      .gamesGrid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Game viewer */
-
-    #gameViewer {
-      position: absolute;
-      inset: 0;
-      display: none;
-      flex-direction: column;
-      background: #111;
-    }
-
-    #gameViewer.visible {
-      display: flex;
-    }
-
-    #gameViewerBar {
-      flex-shrink: 0;
-      height: 44px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 8px;
-      background: #181818;
-      border-bottom: 1px solid #333;
-    }
-
-    #backToGames {
-      height: 33px;
-      padding: 0 13px;
-      border: 1px solid #444;
-      border-radius: 8px;
-      background: #242424;
-      color: white;
-    }
-
-    #gameViewerTitle {
-      font-weight: bold;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    #gameFrame {
-      flex: 1;
-      width: 100%;
-      border: 0;
-      background: #111;
-    }
-
-    /* Small iPad adjustments */
-
-    @media (max-height: 600px) {
-      #title {
-        margin: 3px 0 5px;
-      }
-
-      #quickButtons {
-        margin-top: 5px;
-      }
-
-      #tabs {
-        min-height: 39px;
-      }
-
-      .homeScreen {
-        justify-content: flex-start;
-        padding-top: 35px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+>
+
+<meta name="theme-color" content="#050505">
+
+<title>Forknut Proxy</title>
+
+<style>
+
+/* =========================================================
+   BASIC
+========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #000;
+  color: white;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+
+/* =========================================================
+   BACKGROUND PHOTO
+========================================================= */
+
+#background {
+  position: fixed;
+  inset: 0;
+
+  background-image:
+    linear-gradient(
+      rgba(0,0,0,0.20),
+      rgba(0,0,0,0.35)
+    ),
+    url("/IMG_1691.jpeg");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  z-index: -10;
+}
+
+
+/* =========================================================
+   ANIMATED CIRCLES
+========================================================= */
+
+#circles {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -5;
+}
+
+.circle {
+  position: absolute;
+
+  width: 80px;
+  height: 80px;
+
+  border-radius: 50%;
+
+  border: 3px solid rgba(255,255,255,0.35);
+
+  box-shadow:
+    0 0 20px rgba(255,255,255,0.25),
+    inset 0 0 20px rgba(255,255,255,0.12);
+
+  animation:
+    floatCircle 12s infinite ease-in-out;
+}
+
+.circle:nth-child(1) {
+  left: 5%;
+  top: 15%;
+  width: 65px;
+  height: 65px;
+  animation-delay: 0s;
+}
+
+.circle:nth-child(2) {
+  left: 75%;
+  top: 10%;
+  width: 100px;
+  height: 100px;
+  animation-delay: 2s;
+}
+
+.circle:nth-child(3) {
+  left: 45%;
+  top: 55%;
+  width: 55px;
+  height: 55px;
+  animation-delay: 4s;
+}
+
+.circle:nth-child(4) {
+  left: 85%;
+  top: 65%;
+  width: 75px;
+  height: 75px;
+  animation-delay: 1s;
+}
+
+.circle:nth-child(5) {
+  left: 15%;
+  top: 75%;
+  width: 110px;
+  height: 110px;
+  animation-delay: 3s;
+}
+
+.circle:nth-child(6) {
+  left: 55%;
+  top: 20%;
+  width: 45px;
+  height: 45px;
+  animation-delay: 5s;
+}
+
+@keyframes floatCircle {
+
+  0% {
+    transform: translate(0,0) scale(1);
+    opacity: .25;
+  }
+
+  25% {
+    transform: translate(30px,-35px) scale(1.15);
+    opacity: .55;
+  }
+
+  50% {
+    transform: translate(-25px,25px) scale(.9);
+    opacity: .3;
+  }
+
+  75% {
+    transform: translate(40px,35px) scale(1.2);
+    opacity: .6;
+  }
+
+  100% {
+    transform: translate(0,0) scale(1);
+    opacity: .25;
+  }
+
+}
+
+
+/* =========================================================
+   MAIN APPLICATION
+========================================================= */
+
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+
+/* =========================================================
+   TOP BAR
+========================================================= */
+
+#topbar {
+  flex-shrink: 0;
+
+  width: 100%;
+
+  padding:
+    env(safe-area-inset-top)
+    10px
+    8px
+    10px;
+
+  background: rgba(0,0,0,0.78);
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+#title {
+  text-align: center;
+
+  font-size: 21px;
+  font-weight: bold;
+
+  margin:
+    5px
+    0
+    9px;
+}
+
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+#searchForm {
+  display: flex;
+
+  width: 100%;
+
+  gap: 7px;
+}
+
+#urlInput {
+  flex: 1;
+
+  min-width: 0;
+
+  height: 45px;
+
+  padding: 0 14px;
+
+  border-radius: 11px;
+
+  border: 1px solid rgba(255,255,255,0.25);
+
+  background: rgba(20,20,20,0.9);
+
+  color: white;
+
+  font-size: 16px;
+
+  outline: none;
+
+  -webkit-appearance: none;
+}
+
+#urlInput::placeholder {
+  color: #aaa;
+}
+
+#urlInput:focus {
+  border-color: rgba(255,255,255,0.7);
+}
+
+#goButton {
+  flex-shrink: 0;
+
+  width: 60px;
+  height: 45px;
+
+  border: 0;
+
+  border-radius: 11px;
+
+  background: white;
+
+  color: black;
+
+  font-weight: bold;
+
+  font-size: 16px;
+}
+
+#goButton:active {
+  transform: scale(.96);
+}
+
+
+/* =========================================================
+   QUICK BUTTONS
+========================================================= */
+
+#quickButtons {
+  display: flex;
+
+  gap: 7px;
+
+  margin-top: 8px;
+
+  overflow-x: auto;
+
+  scrollbar-width: none;
+}
+
+#quickButtons::-webkit-scrollbar {
+  display: none;
+}
+
+.quickButton {
+  flex-shrink: 0;
+
+  height: 38px;
+
+  padding: 0 14px;
+
+  border-radius: 9px;
+
+  border: 1px solid rgba(255,255,255,0.2);
+
+  background: rgba(25,25,25,0.9);
+
+  color: white;
+
+  font-size: 14px;
+
+  white-space: nowrap;
+}
+
+.quickButton:active {
+  background: rgba(70,70,70,0.95);
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+#status {
+  flex-shrink: 0;
+
+  min-height: 27px;
+
+  padding: 5px 12px;
+
+  background: rgba(0,0,0,0.72);
+
+  color: #ddd;
+
+  font-size: 12px;
+
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+
+/* =========================================================
+   TABS
+========================================================= */
+
+#tabs {
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 5px;
+
+  min-height: 43px;
+
+  padding: 5px 7px;
+
+  background: rgba(0,0,0,0.78);
+
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+
+  overflow-x: auto;
+
+  scrollbar-width: none;
+}
+
+#tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  max-width: 190px;
+
+  height: 32px;
+
+  padding: 0 9px;
+
+  border-radius: 8px;
+
+  border: 1px solid rgba(255,255,255,0.18);
+
+  background: rgba(30,30,30,0.9);
+
+  color: #ccc;
+
+  font-size: 13px;
+}
+
+.tab.active {
+  background: rgba(70,70,70,0.95);
+  color: white;
+}
+
+.tabTitle {
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.closeTab {
+  border: 0;
+
+  background: transparent;
+
+  color: #aaa;
+
+  font-size: 16px;
+
+  padding: 0;
+}
+
+#newTabButton {
+  flex-shrink: 0;
+
+  width: 32px;
+  height: 32px;
+
+  border-radius: 8px;
+
+  border: 1px solid rgba(255,255,255,0.2);
+
+  background: rgba(30,30,30,0.9);
+
+  color: white;
+
+  font-size: 20px;
+}
+
+
+/* =========================================================
+   BROWSER AREA
+========================================================= */
+
+#browser {
+  position: relative;
+
+  flex: 1;
+
+  min-height: 0;
+
+  width: 100%;
+
+  overflow: hidden;
+}
+
+
+/* =========================================================
+   HOME SCREEN
+========================================================= */
+
+#homeScreen {
+  position: absolute;
+
+  inset: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+
+  padding: 25px;
+
+  overflow-y: auto;
+
+  background: rgba(0,0,0,0.18);
+}
+
+#homeScreen.hidden {
+  display: none;
+}
+
+.logo {
+  font-size: 65px;
+
+  margin-bottom: 4px;
+
+  filter:
+    drop-shadow(0 0 15px rgba(255,255,255,.35));
+}
+
+.homeTitle {
+  font-size: 32px;
+
+  font-weight: bold;
+
+  text-shadow:
+    0 2px 15px rgba(0,0,0,.9);
+}
+
+.homeSubtitle {
+  margin-top: 6px;
+
+  color: #ddd;
+
+  font-size: 14px;
+
+  text-shadow:
+    0 2px 8px black;
+}
+
+.homeButtons {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  justify-content: center;
+
+  gap: 9px;
+
+  margin-top: 24px;
+
+  max-width: 500px;
+}
+
+.homeButton {
+  padding: 13px 18px;
+
+  border-radius: 11px;
+
+  border: 1px solid rgba(255,255,255,0.25);
+
+  background: rgba(15,15,15,0.85);
+
+  color: white;
+
+  font-size: 15px;
+}
+
+.homeButton:active {
+  background: rgba(70,70,70,.95);
+}
+
+
+/* =========================================================
+   BROWSER IFRAMES
+========================================================= */
+
+.browserFrame {
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  border: 0;
+
+  background: white;
+
+  display: none;
+}
+
+.browserFrame.active {
+  display: block;
+}
+
+
+/* =========================================================
+   GAMES SCREEN
+========================================================= */
+
+#gamesScreen {
+  position: absolute;
+
+  inset: 0;
+
+  display: none;
+
+  flex-direction: column;
+
+  padding: 18px;
+
+  overflow-y: auto;
+
+  background: rgba(0,0,0,.75);
+
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+#gamesScreen.visible {
+  display: flex;
+}
+
+.gamesTitle {
+  text-align: center;
+
+  font-size: 28px;
+
+  font-weight: bold;
+
+  margin: 5px 0;
+}
+
+.gamesSubtitle {
+  text-align: center;
+
+  color: #ccc;
+
+  font-size: 14px;
+
+  margin-bottom: 18px;
+}
+
+.gamesGrid {
+  width: 100%;
+
+  max-width: 800px;
+
+  margin: auto;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+
+  gap: 12px;
+}
+
+.gameCard {
+  padding: 18px;
+
+  min-height: 150px;
+
+  border-radius: 14px;
+
+  border: 1px solid rgba(255,255,255,.2);
+
+  background: rgba(25,25,25,.92);
+
+  color: white;
+}
+
+.gameEmoji {
+  font-size: 38px;
+}
+
+.gameName {
+  font-size: 20px;
+
+  font-weight: bold;
+
+  margin-top: 5px;
+}
+
+.gameDescription {
+  color: #aaa;
+
+  font-size: 13px;
+
+  margin-top: 5px;
+}
+
+.gamePlay {
+  margin-top: 12px;
+
+  padding: 9px 15px;
+
+  border: 0;
+
+  border-radius: 8px;
+
+  background: white;
+
+  color: black;
+
+  font-weight: bold;
+}
+
+@media(max-width:520px) {
+
+  .gamesGrid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+/* =========================================================
+   GAME VIEWER
+========================================================= */
+
+#gameViewer {
+  position: absolute;
+
+  inset: 0;
+
+  display: none;
+
+  flex-direction: column;
+
+  background: #111;
+}
+
+#gameViewer.visible {
+  display: flex;
+}
+
+#gameViewerBar {
+  flex-shrink: 0;
+
+  height: 45px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  padding: 5px 8px;
+
+  background: #181818;
+
+  border-bottom: 1px solid #333;
+}
+
+#backToGames {
+  height: 34px;
+
+  padding: 0 13px;
+
+  border-radius: 8px;
+
+  border: 1px solid #444;
+
+  background: #242424;
+
+  color: white;
+}
+
+#gameViewerTitle {
+  font-weight: bold;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+#gameFrame {
+  flex: 1;
+
+  width: 100%;
+
+  border: 0;
+
+  background: #111;
+}
+
+
+/* =========================================================
+   MOBILE / IPAD
+========================================================= */
+
+@media(max-height:650px) {
+
+  #title {
+    margin-top: 2px;
+    margin-bottom: 5px;
+  }
+
+  #quickButtons {
+    margin-top: 5px;
+  }
+
+  #tabs {
+    min-height: 39px;
+  }
+
+  .homeScreen {
+    justify-content: flex-start;
+    padding-top: 35px;
+  }
+
+}
+
+</style>
 </head>
+
 
 <body>
 
+<!-- =======================================================
+     PHOTO BACKGROUND
+======================================================= -->
+
+<div id="background"></div>
+
+
+<!-- =======================================================
+     ANIMATED CIRCLES
+======================================================= -->
+
+<div id="circles">
+
+  <div class="circle"></div>
+  <div class="circle"></div>
+  <div class="circle"></div>
+  <div class="circle"></div>
+  <div class="circle"></div>
+  <div class="circle"></div>
+
+</div>
+
+
+<!-- =======================================================
+     APP
+======================================================= -->
+
+<div id="app">
+
+
+  <!-- TOP BAR -->
+
   <div id="topbar">
 
-    <div id="title">🥜 Forknut Proxy</div>
+    <div id="title">
+      🥜 Forknut Proxy
+    </div>
+
+
+    <!-- SEARCH -->
 
     <form id="searchForm">
+
       <input
         id="urlInput"
         type="text"
@@ -451,53 +861,61 @@
         autocomplete="off"
         autocapitalize="none"
         spellcheck="false"
-        placeholder="Enter a website or search..."
-        aria-label="Website address"
+        placeholder="Search Google or enter a website..."
+        aria-label="Website or search"
       >
 
-      <button id="goButton" type="submit">
+      <button
+        id="goButton"
+        type="submit">
         Go
       </button>
+
     </form>
+
+
+    <!-- BUTTONS -->
 
     <div id="quickButtons">
 
       <button
-        class="quickButton"
         id="homeButton"
+        class="quickButton"
         type="button">
         🏠 Home
       </button>
 
+
       <button
-        class="quickButton"
         id="pointercrateButton"
+        class="quickButton"
         type="button"
         data-site="pointercrate">
         🎮 Pointercrate
       </button>
 
+
       <button
-        class="quickButton"
         id="gamesButton"
+        class="quickButton"
         type="button"
         data-action="games">
         🕹️ Games
       </button>
 
-      <button
-        class="quickButton"
-        type="button"
-        onclick="document.getElementById('urlInput').focus()">
-        🔎 Search
-      </button>
-
     </div>
+
   </div>
+
+
+  <!-- STATUS -->
 
   <div id="status">
     Ready
   </div>
+
+
+  <!-- TABS -->
 
   <div id="tabs">
 
@@ -510,15 +928,20 @@
 
   </div>
 
+
+  <!-- BROWSER -->
+
   <main id="browser">
 
-    <!-- Home screen -->
+
+    <!-- HOME -->
 
     <section
-      id="homeScreen"
-      class="homeScreen">
+      id="homeScreen">
 
-      <div class="logo">🥜</div>
+      <div class="logo">
+        🥜
+      </div>
 
       <div class="homeTitle">
         Forknut Proxy
@@ -528,14 +951,16 @@
         Made by Archie Faulkner
       </div>
 
+
       <div class="homeButtons">
 
         <button
           class="homeButton"
-          type="button"
-          onclick="document.getElementById('urlInput').focus()">
-          🔎 Browse
+          id="homeBrowseButton"
+          type="button">
+          🔎 Search
         </button>
+
 
         <button
           class="homeButton"
@@ -543,6 +968,7 @@
           onclick="document.getElementById('pointercrateButton').click()">
           🎮 Pointercrate
         </button>
+
 
         <button
           class="homeButton"
@@ -555,7 +981,8 @@
 
     </section>
 
-    <!-- Games -->
+
+    <!-- GAMES -->
 
     <section id="gamesScreen">
 
@@ -567,7 +994,11 @@
         Choose a game to play
       </div>
 
+
       <div class="gamesGrid">
+
+
+        <!-- SNAKE -->
 
         <div class="gameCard">
 
@@ -592,6 +1023,9 @@
 
         </div>
 
+
+        <!-- 2048 -->
+
         <div class="gameCard">
 
           <div class="gameEmoji">
@@ -603,7 +1037,7 @@
           </div>
 
           <div class="gameDescription">
-            Combine matching numbers to reach 2048.
+            Combine matching numbers.
           </div>
 
           <button
@@ -614,6 +1048,9 @@
           </button>
 
         </div>
+
+
+        <!-- FLAPPY -->
 
         <div class="gameCard">
 
@@ -626,7 +1063,7 @@
           </div>
 
           <div class="gameDescription">
-            Fly through the pipes without crashing.
+            Fly through the pipes.
           </div>
 
           <button
@@ -637,6 +1074,9 @@
           </button>
 
         </div>
+
+
+        <!-- PONG -->
 
         <div class="gameCard">
 
@@ -649,7 +1089,7 @@
           </div>
 
           <div class="gameDescription">
-            Beat the computer in classic Pong.
+            Beat the computer.
           </div>
 
           <button
@@ -661,11 +1101,13 @@
 
         </div>
 
+
       </div>
 
     </section>
 
-    <!-- Individual game -->
+
+    <!-- GAME VIEWER -->
 
     <section id="gameViewer">
 
@@ -683,263 +1125,489 @@
 
       </div>
 
+
       <iframe
         id="gameFrame"
         title="Forknut Game"
         allow="fullscreen; autoplay"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
-      ></iframe>
+        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock">
+      </iframe>
 
     </section>
 
+
   </main>
 
-  <script>
-    /*
-      Forknut v12 UI
+</div>
 
-      Games:
-        /games/snake.html
-        /games/2048.html
-        /games/flappy.html
-        /games/pong.html
+
+<!-- =======================================================
+     GAME / UI SCRIPT
+======================================================= -->
+
+<script>
+
+const gamesScreen =
+  document.getElementById("gamesScreen");
+
+const gameViewer =
+  document.getElementById("gameViewer");
+
+const gameFrame =
+  document.getElementById("gameFrame");
+
+const gameViewerTitle =
+  document.getElementById("gameViewerTitle");
+
+const backToGames =
+  document.getElementById("backToGames");
+
+const homeScreen =
+  document.getElementById("homeScreen");
+
+const homeButton =
+  document.getElementById("homeButton");
+
+const gamesButton =
+  document.getElementById("gamesButton");
+
+const homeBrowseButton =
+  document.getElementById("homeBrowseButton");
+
+const pointercrateButton =
+  document.getElementById("pointercrateButton");
+
+const urlInput =
+  document.getElementById("urlInput");
+
+const searchForm =
+  document.getElementById("searchForm");
+
+const status =
+  document.getElementById("status");
+
+
+/* =======================================================
+   STATUS
+======================================================= */
+
+function forknetStatus(text) {
+
+  if (status) {
+    status.textContent = text;
+  }
+
+}
+
+
+/* =======================================================
+   HOME
+======================================================= */
+
+function showHome() {
+
+  gamesScreen.classList.remove("visible");
+
+  gameViewer.classList.remove("visible");
+
+  homeScreen.classList.remove("hidden");
+
+  document
+    .querySelectorAll(".browserFrame")
+    .forEach(frame => {
+      frame.classList.remove("active");
+    });
+
+  forknetStatus("Home");
+
+}
+
+
+/* =======================================================
+   GAMES
+======================================================= */
+
+function showGames() {
+
+  homeScreen.classList.add("hidden");
+
+  gameViewer.classList.remove("visible");
+
+  gamesScreen.classList.add("visible");
+
+  document
+    .querySelectorAll(".browserFrame")
+    .forEach(frame => {
+      frame.classList.remove("active");
+    });
+
+  forknetStatus("Games");
+
+}
+
+
+/* =======================================================
+   OPEN GAME
+======================================================= */
+
+function openForknutGame(game) {
+
+  const gameInfo = {
+
+    snake: {
+      file: "snake.html",
+      title: "🐍 Snake"
+    },
+
+    "2048": {
+      file: "2048.html",
+      title: "🔢 2048"
+    },
+
+    flappy: {
+      file: "flappy.html",
+      title: "🐦 Flappy Fork"
+    },
+
+    pong: {
+      file: "pong.html",
+      title: "🏓 Pong"
+    }
+
+  };
+
+
+  const selected =
+    gameInfo[game];
+
+
+  if (!selected) {
+
+    forknetStatus(
+      "Game not found"
+    );
+
+    return;
+  }
+
+
+  gamesScreen.classList.remove("visible");
+
+  homeScreen.classList.add("hidden");
+
+  gameViewer.classList.add("visible");
+
+
+  gameViewerTitle.textContent =
+    selected.title;
+
+
+  gameFrame.src =
+    "/games/" + selected.file;
+
+
+  forknetStatus(
+    "Playing " + selected.title
+  );
+
+}
+
+
+/* =======================================================
+   GAME BUTTONS
+======================================================= */
+
+document
+  .querySelectorAll(".gamePlay")
+  .forEach(button => {
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        openForknutGame(
+          button.dataset.game
+        );
+
+      }
+    );
+
+  });
+
+
+/* =======================================================
+   BACK TO GAMES
+======================================================= */
+
+backToGames.addEventListener(
+  "click",
+  () => {
+
+    gameFrame.src = "";
+
+    gameViewer.classList.remove(
+      "visible"
+    );
+
+    gamesScreen.classList.add(
+      "visible"
+    );
+
+    forknetStatus("Games");
+
+  }
+);
+
+
+/* =======================================================
+   GAMES BUTTON
+======================================================= */
+
+gamesButton.addEventListener(
+  "click",
+  () => {
+
+    showGames();
+
+  }
+);
+
+
+/* =======================================================
+   HOME BUTTON
+======================================================= */
+
+homeButton.addEventListener(
+  "click",
+  () => {
+
+    showHome();
+
+  }
+);
+
+
+/* =======================================================
+   HOME SEARCH BUTTON
+======================================================= */
+
+homeBrowseButton.addEventListener(
+  "click",
+  () => {
+
+    urlInput.focus();
+
+  }
+);
+
+
+/* =======================================================
+   POINTERCRATE
+======================================================= */
+
+pointercrateButton.addEventListener(
+  "click",
+  () => {
+
+    const url =
+      "https://pointercrate.com/demonlist/";
+
+    urlInput.value = url;
+
+    /*
+      Let the existing Forknut app.js
+      perform the actual Scramjet browse.
     */
 
-    const gamesScreen =
-      document.getElementById("gamesScreen");
+    if (
+      typeof window.browse ===
+      "function"
+    ) {
 
-    const gameViewer =
-      document.getElementById("gameViewer");
+      window.browse(url);
 
-    const gameFrame =
-      document.getElementById("gameFrame");
+    } else {
 
-    const gameViewerTitle =
-      document.getElementById("gameViewerTitle");
+      const form =
+        document.getElementById(
+          "searchForm"
+        );
 
-    const backToGames =
-      document.getElementById("backToGames");
-
-    const browser =
-      document.getElementById("browser");
-
-    const homeScreen =
-      document.getElementById("homeScreen");
-
-    const status =
-      document.getElementById("status");
-
-    const urlInput =
-      document.getElementById("urlInput");
-
-    const gamesButton =
-      document.getElementById("gamesButton");
-
-    const homeButton =
-      document.getElementById("homeButton");
-
-    const pointercrateButton =
-      document.getElementById("pointercrateButton");
-
-    function setLocalStatus(text) {
-      if (status) {
-        status.textContent = text;
-      }
-    }
-
-    function hideSpecialScreens() {
-      gamesScreen.classList.remove("visible");
-      gameViewer.classList.remove("visible");
-      homeScreen.classList.add("hidden");
-    }
-
-    function showHome() {
-      gamesScreen.classList.remove("visible");
-      gameViewer.classList.remove("visible");
-
-      document
-        .querySelectorAll(".browserFrame")
-        .forEach(frame => {
-          frame.classList.remove("active");
-        });
-
-      homeScreen.classList.remove("hidden");
-
-      setLocalStatus("Home");
-
-      if (typeof window.setActiveTab === "function") {
-        window.setActiveTab(null);
-      }
-    }
-
-    function showGames() {
-      gamesScreen.classList.add("visible");
-      gameViewer.classList.remove("visible");
-      homeScreen.classList.add("hidden");
-
-      document
-        .querySelectorAll(".browserFrame")
-        .forEach(frame => {
-          frame.classList.remove("active");
-        });
-
-      setLocalStatus("Games");
-
-      if (typeof window.setActiveTab === "function") {
-        window.setActiveTab(null);
-      }
-    }
-
-    function openGame(game) {
-
-      const files = {
-        snake: {
-          file: "snake.html",
-          title: "🐍 Snake"
-        },
-
-        "2048": {
-          file: "2048.html",
-          title: "🔢 2048"
-        },
-
-        flappy: {
-          file: "flappy.html",
-          title: "🐦 Flappy Fork"
-        },
-
-        pong: {
-          file: "pong.html",
-          title: "🏓 Pong"
-        }
-      };
-
-      const selected = files[game];
-
-      if (!selected) {
-        setLocalStatus("Game not found");
-        return;
+      if (form) {
+        form.requestSubmit();
       }
 
-      gamesScreen.classList.remove("visible");
-      homeScreen.classList.add("hidden");
-      gameViewer.classList.add("visible");
+    }
 
-      gameViewerTitle.textContent =
-        selected.title;
+  }
+);
 
-      gameFrame.src =
-        "/games/" + selected.file;
 
-      setLocalStatus(
-        "Playing " + selected.title
+/* =======================================================
+   SEARCH FALLBACK
+======================================================= */
+
+searchForm.addEventListener(
+  "submit",
+  event => {
+
+    event.preventDefault();
+
+    const value =
+      urlInput.value.trim();
+
+    if (!value) {
+
+      urlInput.focus();
+
+      forknetStatus(
+        "Enter a website or search"
       );
+
+      return;
     }
 
-    document
-      .querySelectorAll(".gamePlay")
-      .forEach(button => {
-
-        button.addEventListener("click", () => {
-          openGame(button.dataset.game);
-        });
-
-      });
-
-    backToGames.addEventListener("click", () => {
-      gameFrame.src = "";
-      gameViewer.classList.remove("visible");
-      gamesScreen.classList.add("visible");
-      homeScreen.classList.add("hidden");
-
-      setLocalStatus("Games");
-    });
-
-    gamesButton.addEventListener("click", () => {
-      showGames();
-    });
-
-    homeButton.addEventListener("click", () => {
-      showHome();
-    });
 
     /*
-      Pointercrate button.
-
-      The normal app.js handles browsing.
-      This simply sends the address to the
-      existing URL system if available.
+      IMPORTANT:
+      If app.js has its browse()
+      function, use it.
     */
 
-    pointercrateButton.addEventListener("click", () => {
+    if (
+      typeof window.browse ===
+      "function"
+    ) {
 
-      const pointercrateURL =
-        "https://pointercrate.com/demonlist/";
+      window.browse(value);
 
-      if (typeof window.browse === "function") {
-        window.browse(pointercrateURL);
-        return;
+      return;
+    }
+
+
+    /*
+      If app.js hasn't exposed browse(),
+      try to use its normal form handling.
+    */
+
+    forknetStatus(
+      "Opening " + value
+    );
+
+
+    /*
+      This fallback sends searches to
+      Google and normal URLs directly.
+      The normal app.js should normally
+      handle this before this fallback.
+    */
+
+    let target = value;
+
+
+    if (
+      !/^https?:\/\//i.test(target)
+    ) {
+
+      if (
+        target.includes(".") &&
+        !target.includes(" ")
+      ) {
+
+        target =
+          "https://" + target;
+
+      } else {
+
+        target =
+          "https://www.google.com/search?q=" +
+          encodeURIComponent(target);
+
       }
-
-      if (urlInput) {
-        urlInput.value =
-          pointercrateURL;
-
-        const form =
-          document.getElementById("searchForm");
-
-        if (form) {
-          form.requestSubmit();
-        }
-      }
-
-    });
-
-    /*
-      Make the Games screen available to
-      app.js if it wants to call it.
-    */
-
-    window.showForknutGames = showGames;
-    window.openForknutGame = openGame;
-    window.showForknutHome = showHome;
-
-    /*
-      Prevent the browser from interpreting
-      game buttons as form submissions.
-    */
-
-    document
-      .querySelectorAll("button")
-      .forEach(button => {
-
-        if (!button.type) {
-          button.type = "button";
-        }
-
-      });
-
-    /*
-      Keep the URL box usable on iPad.
-    */
-
-    if (urlInput) {
-
-      urlInput.addEventListener("focus", () => {
-        setLocalStatus("Enter a website or search");
-      });
-
-      urlInput.addEventListener("keydown", event => {
-
-        if (event.key === "Escape") {
-          urlInput.blur();
-        }
-
-      });
 
     }
 
-  </script>
+
+    /*
+      Create a browser frame if the
+      Scramjet app hasn't provided one.
+    */
+
+    const frame =
+      document.createElement("iframe");
+
+    frame.className =
+      "browserFrame active";
+
+    frame.src = target;
+
+    frame.allow =
+      "fullscreen; autoplay; encrypted-media; picture-in-picture";
+
+    frame.setAttribute(
+      "referrerpolicy",
+      "no-referrer"
+    );
+
+
+    homeScreen.classList.add(
+      "hidden"
+    );
+
+    gamesScreen.classList.remove(
+      "visible"
+    );
+
+    gameViewer.classList.remove(
+      "visible"
+    );
+
+
+    document
+      .querySelectorAll(".browserFrame")
+      .forEach(existing => {
+        existing.classList.remove(
+          "active"
+        );
+      });
+
+
+    browser.appendChild(frame);
+
+  }
+);
+
+
+/* =======================================================
+   EXPORT FUNCTIONS
+======================================================= */
+
+window.showForknutGames =
+  showGames;
+
+window.openForknutGame =
+  openForknutGame;
+
+window.showForknutHome =
+  showHome;
+
+
+/* =======================================================
+   START
+======================================================= */
+
+forknetStatus("Ready");
+
+urlInput.focus();
+
+</script>
+
+
+<!-- =======================================================
+     ORIGINAL FORKNUT APP
+======================================================= -->
+
+<script src="/app.js"></script>
 
 </body>
 </html>
