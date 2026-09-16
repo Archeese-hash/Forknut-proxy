@@ -329,20 +329,31 @@ function extractOriginalUrl(value) {
     } catch {}
   }
 
-  // Use the last useful URL. Scramjet normally puts the original target at
-  // the end of its rewritten URL. Never send Forknut's own URL upstream.
+  // Prefer actual image-CDN URLs over the surrounding Google/YouTube page URL.
+  // Scramjet can leave several absolute URLs in a rewritten image request.
   const ownHost = String(location.hostname || "").toLowerCase();
-  for (let i = candidates.length - 1; i >= 0; i--) {
+  const scored = [];
+  for (const candidate of candidates) {
     try {
-      const parsed = new URL(candidates[i]);
+      const parsed = new URL(candidate);
       const host = parsed.hostname.toLowerCase();
-      if (host && host !== ownHost && !host.endsWith(".onrender.com")) {
-        return parsed.href;
-      }
+      if (!host || host === ownHost || host.endsWith(".onrender.com")) continue;
+
+      let score = 0;
+      if (host === "i.ytimg.com" || host.endsWith(".ytimg.com")) score += 100;
+      if (host === "googleusercontent.com" || host.endsWith(".googleusercontent.com")) score += 90;
+      if (host === "gstatic.com" || host.endsWith(".gstatic.com")) score += 80;
+      if (host === "ggpht.com" || host.endsWith(".ggpht.com")) score += 80;
+      if (/[.](jpg|jpeg|png|webp|gif|avif|svg)(?:$|[?#])/i.test(parsed.pathname)) score += 60;
+      if (/\/vi(?:_webp)?\//i.test(parsed.pathname)) score += 100;
+      if (/\/search(?:[/?]|$)/i.test(parsed.pathname)) score -= 50;
+      if (host === "google.com" || host.endsWith(".google.com")) score -= 30;
+      scored.push({ href: parsed.href, score });
     } catch {}
   }
 
-  return "";
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.href || "";
 }
 
 function forknetImageEndpoint(original) {
