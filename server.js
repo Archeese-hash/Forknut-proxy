@@ -109,123 +109,6 @@ forknetTransportBody instanceof ArrayBuffer ? [forknetTransportBody] : [],
 
 await prepareWebKitController();
 
-const diagnosticLog = [];
-const MAX_LOG = 1000;
-
-function addServerDiagnostic(entry) {
-  const item = {
-    receivedAt: new Date().toISOString(),
-    ...entry
-  };
-  diagnosticLog.push(item);
-  if (diagnosticLog.length > MAX_LOG) diagnosticLog.shift();
-  console.log("[Forknut Diagnostic]", item);
-}
-
-function captureServerError(kind, error, extra = {}) {
-  const err = error || {};
-  addServerDiagnostic({
-    kind,
-    name: err.name || "Error",
-    message: String(err.message || err || ""),
-    stack: String(err.stack || ""),
-    ...extra
-  });
-}
-
-process.on("uncaughtException", (error) => {
-  captureServerError("PROCESS_UNCAUGHT_EXCEPTION", error);
-});
-
-process.on("unhandledRejection", (reason) => {
-  captureServerError("PROCESS_UNHANDLED_REJECTION", reason);
-});
-
-process.on("warning", (warning) => {
-  captureServerError("PROCESS_WARNING", warning);
-});
-
-const app = Fastify({
-  logger: true,
-  serverFactory: (handler) => {
-    const server = http.createServer(handler);
-
-    server.on("upgrade", (req, socket, head) => {
-      try {
-        const pathname = new URL(req.url || "/", "http://localhost").pathname;
-        if (pathname === "/wisp/") {
-          console.log("[Forknut] Wisp connection opened");
-          req.url = "/wisp/";
-          wisp.routeRequest(req, socket, head);
-          return;
-        }
-        console.log("[Forknut] Rejected WebSocket:", pathname);
-        socket.end();
-      } catch (error) {
-        console.error("[Forknut] Wisp error:", error);
-        socket.end();
-      }
-    });
-
-    return server;
-  }
-});
-
-app.addHook("onRequest", async (request) => {
-  if (request.url.startsWith("/__forknut/")) {
-    addServerDiagnostic({
-      kind: "SERVER_REQUEST",
-      method: request.method,
-      url: request.url,
-      userAgent: request.headers["user-agent"] || ""
-    });
-  }
-});
-
-app.post("/__forknut/diag", async (request, reply) => {
-  let entry = request.body;
-  if (typeof entry === "string") {
-    try { entry = JSON.parse(entry); } catch {}
-  }
-  addServerDiagnostic({
-    kind: "CLIENT_EVENT",
-    entry: entry ?? null
-  });
-  return reply.code(204).send();
-});
-
-app.get("/__forknut/diag", async () => ({
-  ok: true,
-  count: diagnosticLog.length,
-  events: diagnosticLog
-}));
-
-app.delete("/__forknut/diag", async () => {
-  diagnosticLog.length = 0;
-  return { ok: true };
-});
-
-app.setErrorHandler((error, request, reply) => {
-  captureServerError("FASTIFY_ERROR", error, {
-    method: request.method,
-    url: request.url
-  });
-
-  if (!reply.sent) {
-    reply.code(error.statusCode && error.statusCode >= 400 ? error.statusCode : 500);
-    reply.type("text/plain; charset=utf-8");
-    return reply.send(`Forknut server error: ${String(error.message || error)}`);
-  }
-});
-
-app.get("/__forknut/diag.txt", async (request, reply) => {
-  return reply
-    .type("text/plain; charset=utf-8")
-    .send(diagnosticLog.map(x => JSON.stringify(x)).join("\n") || "No diagnostic events yet.");
-});
-
-
-
 function isBlockedHostname(hostname) {
   const host = hostname.toLowerCase();
   if (host === "localhost" || host.endsWith(".localhost")) return true;
@@ -295,12 +178,6 @@ app.get("/__forknut/image", async (request, reply) => {
     for (let redirects = 0; redirects <= 5; redirects++) {
       await assertSafeUpstream(current.href);
 
-      addServerDiagnostic({
-        kind: "IMAGE_PROXY_FETCH",
-        url: current.href,
-        redirect: redirects
-      });
-
       const upstream = await fetch(current.href, {
         redirect: "manual",
         headers: {
@@ -321,14 +198,7 @@ app.get("/__forknut/image", async (request, reply) => {
 
       if (!upstream.ok) {
         const body = (await upstream.text()).slice(0, 1000);
-        addServerDiagnostic({
-          kind: "IMAGE_PROXY_UPSTREAM_ERROR",
-          url: current.href,
-          status: upstream.status,
-          contentType,
-          body,
-          elapsedMs: Date.now() - started
-        });
+        console.error("[Forknut] Image upstream error:", upstream.status, current.href, body.slice(0, 500));
         return reply.code(upstream.status).type("text/plain; charset=utf-8").send(`Upstream image error ${upstream.status}: ${body}`);
       }
 
@@ -341,16 +211,6 @@ app.get("/__forknut/image", async (request, reply) => {
         return reply.code(413).type("text/plain; charset=utf-8").send("Image is larger than the 12 MB diagnostic proxy limit.");
       }
 
-      addServerDiagnostic({
-        kind: "IMAGE_PROXY_OK",
-        url: current.href,
-        status: upstream.status,
-        contentType,
-        contentLength: upstream.headers.get("content-length") || "",
-        bytes: buffer.length,
-        elapsedMs: Date.now() - started
-      });
-
       return reply
         .code(200)
         .type(contentType)
@@ -361,10 +221,7 @@ app.get("/__forknut/image", async (request, reply) => {
 
     throw new Error("Too many upstream redirects.");
   } catch (error) {
-    captureServerError("IMAGE_PROXY_EXCEPTION", error, {
-      url: current.href,
-      elapsedMs: Date.now() - started
-    });
+    console.error("[Forknut] Image proxy exception:", current.href, error);
     return reply.code(502).type("text/plain; charset=utf-8").send(`Image proxy exception: ${String(error?.message || error)}`);
   }
 });
@@ -377,7 +234,7 @@ app.get("/health", async () => ({
   transport: "epoxy",
   wisp: true,
   coep: "credentialless",
-  diagnostic: "v4-server-exceptions"
+  diagnostic: false
 }));
 
 app.addHook("onSend", async (request, reply) => {
@@ -425,4 +282,4 @@ const port = Number(process.env.PORT || 3000);
 
 await app.listen({ host: "0.0.0.0", port });
 
-console.log(`Forknut Diagnostic v4 running on port ${port}`);
+console.log(`Forknut Proxy running on port ${port}`);
