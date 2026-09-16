@@ -197,16 +197,42 @@ app.get("/__forknut/image", async (request, reply) => {
   let target;
   try {
     let candidate = String(raw);
-    for (let i = 0; i < 3; i++) {
-      const match = candidate.match(/((?:https?|ftp):\/\/[^?#\s]+)/i);
-      if (match) {
-        candidate = match[1];
-        break;
-      }
-      const decoded = decodeURIComponent(candidate);
-      if (decoded === candidate) break;
-      candidate = decoded;
+
+    // Unwrap nested Forknut/Scramjet image URLs. In particular, Google
+    // thumbnails can arrive as: /__forknut/image?url=<encoded URL>.
+    for (let i = 0; i < 6; i++) {
+      let changed = false;
+
+      try {
+        const parsed = new URL(candidate);
+        for (const key of ["url", "imgurl", "mediaurl", "image_url", "src", "u"]) {
+          const nested = parsed.searchParams.get(key);
+          if (nested && /^https?:\/\//i.test(nested)) {
+            candidate = nested;
+            changed = true;
+            break;
+          }
+        }
+      } catch {}
+
+      if (changed) continue;
+
+      try {
+        const decoded = decodeURIComponent(candidate);
+        if (decoded !== candidate) {
+          candidate = decoded;
+          changed = true;
+        }
+      } catch {}
+
+      if (!changed) break;
     }
+
+    // Last-resort extraction of an embedded absolute URL, preserving its
+    // query string instead of truncating at '?'.
+    const embedded = candidate.match(/https?:\/\/[^\s"'<>]+/i);
+    if (embedded && embedded[0] !== candidate) candidate = embedded[0].replace(/[)\],;]+$/, "");
+
     target = new URL(candidate);
   } catch {
     return reply.code(400).type("text/plain; charset=utf-8").send("Invalid image URL.");
@@ -220,20 +246,33 @@ app.get("/__forknut/image", async (request, reply) => {
       await assertSafeUpstream(current.href);
 
       const host = current.hostname.toLowerCase();
-      const googleHost = host === "google.com" || host.endsWith(".google.com") ||
+      const isGoogleImageHost =
+        host === "google.com" || host.endsWith(".google.com") ||
         host === "gstatic.com" || host.endsWith(".gstatic.com") ||
-        host.endsWith("googleusercontent.com");
+        host === "googleusercontent.com" || host.endsWith(".googleusercontent.com") ||
+        host === "ggpht.com" || host.endsWith(".ggpht.com");
+
+      const isYouTubeImageHost =
+        host === "i.ytimg.com" || host.endsWith(".ytimg.com") ||
+        host === "ytimg.com" || host.endsWith(".googlevideo.com");
+
+      // Image CDNs often reject an iPad/WebKit referrer or a referrer from
+      // the CDN itself. Use the site's normal first-party referrer instead.
+      let imageReferer = current.origin + "/";
+      if (isYouTubeImageHost) imageReferer = "https://www.youtube.com/";
+      else if (isGoogleImageHost) imageReferer = "https://www.google.com/";
 
       const upstream = await fetch(current.href, {
         redirect: "manual",
         headers: {
-          "user-agent": request.headers["user-agent"] || "Mozilla/5.0 (iPad; CPU OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1",
+          // A desktop browser UA is more consistently accepted by image CDNs
+          // than the iPad UA when the request originates from a server.
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
           "accept": request.headers.accept || "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-          "referer": googleHost ? "https://www.google.com/" : current.origin + "/",
-          "accept-language": request.headers["accept-language"] || "en-AU,en;q=0.9"
+          "referer": imageReferer,
+          "accept-language": request.headers["accept-language"] || "en-US,en;q=0.9"
         }
       });
-
       const location = upstream.headers.get("location");
       if (upstream.status >= 300 && upstream.status < 400 && location) {
         current = new URL(location, current.href);
