@@ -1,6 +1,6 @@
 importScripts("/controller/controller.sw.js");
 
-// Forknut v7: image requests get a second chance through the server-side
+// Forknut v11: image requests get a second chance through the server-side
 // image proxy when WebKit/Scramjet cannot deliver the original response.
 
 self.addEventListener("install", () => {
@@ -12,25 +12,50 @@ self.addEventListener("activate", event => {
 });
 
 function extractOriginalUrl(value) {
-  const text = String(value || "");
+  let text = String(value || "");
+  const candidates = [];
 
-  // Scramjet 2.x normally leaves the original absolute URL encoded at the
-  // end of the rewritten path. Keep this deliberately broad because the
-  // random path segments can change between requests.
-  const encoded = text.match(/((?:https?|ftp)%3A%2F%2F[^?#\s]+)/i);
-  if (encoded) {
+  for (let pass = 0; pass < 4; pass++) {
+    const matches = text.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+    for (const item of matches) {
+      try { candidates.push(new URL(item.replace(/[),;]+$/, "")).href); } catch {}
+    }
     try {
-      return decodeURIComponent(encoded[1]);
-    } catch {}
+      const decoded = decodeURIComponent(text);
+      if (decoded === text) break;
+      text = decoded;
+    } catch { break; }
   }
 
   try {
-    const decoded = decodeURIComponent(text);
-    const match = decoded.match(/((?:https?|ftp):\/\/[^?#\s]+)/i);
-    return match ? match[1] : "";
-  } catch {
-    return "";
+    const parsed = new URL(text);
+    for (const key of ["imgurl", "mediaurl", "image_url", "url", "src", "u"]) {
+      const candidate = parsed.searchParams.get(key);
+      if (candidate && /^https?:\/\//i.test(candidate)) candidates.unshift(candidate);
+    }
+  } catch {}
+
+  const ownHost = self.location.hostname.toLowerCase();
+  const scored = [];
+  for (const candidate of candidates) {
+    try {
+      const parsed = new URL(candidate);
+      const host = parsed.hostname.toLowerCase();
+      if (!host || host === ownHost || host.endsWith(".onrender.com")) continue;
+      let score = 0;
+      if (host === "i.ytimg.com" || host.endsWith(".ytimg.com")) score += 100;
+      if (host === "googleusercontent.com" || host.endsWith(".googleusercontent.com")) score += 90;
+      if (host === "gstatic.com" || host.endsWith(".gstatic.com")) score += 80;
+      if (host === "ggpht.com" || host.endsWith(".ggpht.com")) score += 80;
+      if (/[.](jpg|jpeg|png|webp|gif|avif|svg)(?:$|[?#])/i.test(parsed.pathname)) score += 60;
+      if (/\/vi(?:_webp)?\//i.test(parsed.pathname)) score += 100;
+      if (/\/search(?:[/?]|$)/i.test(parsed.pathname)) score -= 50;
+      if (host === "google.com" || host.endsWith(".google.com")) score -= 30;
+      scored.push({ href: parsed.href, score });
+    } catch {}
   }
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.href || "";
 }
 
 function looksLikeImage(response) {
