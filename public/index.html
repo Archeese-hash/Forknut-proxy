@@ -31,17 +31,257 @@
       flex-direction: column;
     }
 
-    /* Browser tab bar */
+    /* =========================
+       MOVING BUBBLE BACKGROUND
+       ========================= */
+
+    #bubbleBackground {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(
+          circle at 50% 20%,
+          #241631 0%,
+          #100b16 45%,
+          #09070d 100%
+        );
+    }
+
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.25;
+
+      background:
+        radial-gradient(
+          circle at 30% 25%,
+          rgba(255,255,255,0.22),
+          rgba(150,80,220,0.18) 25%,
+          rgba(100,40,170,0.08) 55%,
+          rgba(60,20,100,0) 75%
+        );
+
+      filter: blur(1px);
+
+      box-shadow:
+        inset -15px -20px 35px rgba(40, 10, 70, 0.25),
+        inset 10px 10px 25px rgba(255,255,255,0.04),
+        0 0 35px rgba(140,70,220,0.08);
+    }
+
+    .bubble1 {
+      width: 180px;
+      height: 180px;
+      left: 5%;
+      top: 65%;
+      animation:
+        floatOne 18s ease-in-out infinite;
+    }
+
+    .bubble2 {
+      width: 260px;
+      height: 260px;
+      left: 70%;
+      top: 10%;
+      animation:
+        floatTwo 24s ease-in-out infinite;
+    }
+
+    .bubble3 {
+      width: 120px;
+      height: 120px;
+      left: 45%;
+      top: 75%;
+      animation:
+        floatThree 15s ease-in-out infinite;
+    }
+
+    .bubble4 {
+      width: 220px;
+      height: 220px;
+      left: 78%;
+      top: 65%;
+      animation:
+        floatFour 21s ease-in-out infinite;
+    }
+
+    .bubble5 {
+      width: 90px;
+      height: 90px;
+      left: 25%;
+      top: 12%;
+      animation:
+        floatFive 13s ease-in-out infinite;
+    }
+
+    .bubble6 {
+      width: 150px;
+      height: 150px;
+      left: 55%;
+      top: 35%;
+      animation:
+        floatSix 19s ease-in-out infinite;
+    }
+
+    @keyframes floatOne {
+      0%, 100% {
+        transform:
+          translate3d(0, 0, 0)
+          scale(1);
+      }
+
+      25% {
+        transform:
+          translate3d(70px, -50px, 0)
+          scale(1.08);
+      }
+
+      50% {
+        transform:
+          translate3d(130px, 20px, 0)
+          scale(0.94);
+      }
+
+      75% {
+        transform:
+          translate3d(40px, 80px, 0)
+          scale(1.04);
+      }
+    }
+
+    @keyframes floatTwo {
+      0%, 100% {
+        transform:
+          translate3d(0, 0, 0)
+          scale(1);
+      }
+
+      30% {
+        transform:
+          translate3d(-100px, 70px, 0)
+          scale(0.92);
+      }
+
+      60% {
+        transform:
+          translate3d(-40px, 140px, 0)
+          scale(1.08);
+      }
+
+      80% {
+        transform:
+          translate3d(80px, 60px, 0)
+          scale(0.97);
+      }
+    }
+
+    @keyframes floatThree {
+      0%, 100% {
+        transform:
+          translate3d(0, 0, 0)
+          scale(1);
+      }
+
+      50% {
+        transform:
+          translate3d(-90px, -120px, 0)
+          scale(1.15);
+      }
+    }
+
+    @keyframes floatFour {
+      0%, 100% {
+        transform:
+          translate3d(0, 0, 0)
+          scale(1);
+      }
+
+      25% {
+        transform:
+          translate3d(-80px, -30px, 0)
+          scale(1.05);
+      }
+
+      50% {
+        transform:
+          translate3d(-130px, -110px, 0)
+          scale(0.93);
+      }
+
+      75% {
+        transform:
+          translate3d(-40px, -170px, 0)
+          scale(1.08);
+      }
+    }
+
+    @keyframes floatFive {
+      0%, 100% {
+        transform:
+          translate3d(0, 0, 0);
+      }
+
+      50% {
+        transform:
+          translate3d(100px, 100px, 0);
+      }
+    }
+
+    @keyframes floatSix {
+      0%, 100% {
+        transform:
+          translate3d(0, 0, 0)
+          scale(1);
+      }
+
+      33% {
+        transform:
+          translate3d(90px, -70px, 0)
+          scale(1.1);
+      }
+
+      66% {
+        transform:
+          translate3d(-70px, 60px, 0)
+          scale(0.92);
+      }
+    }
+
+    /* =========================
+       TAB BAR
+       ========================= */
 
     #tabBar {
+      position: relative;
+      z-index: 10;
+
       height: 52px;
       min-height: 52px;
+
       display: flex;
       align-items: center;
+
       gap: 6px;
-      padding: 7px 8px;
-      background: #15121b;
-      border-bottom: 1px solid #30283b;
+
+      padding:
+        7px 8px;
+
+      background:
+        rgba(21, 18, 27, 0.88);
+
+      backdrop-filter:
+        blur(14px);
+
+      -webkit-backdrop-filter:
+        blur(14px);
+
+      border-bottom:
+        1px solid rgba(120, 90, 150, 0.25);
+
       overflow-x: auto;
       overflow-y: hidden;
     }
@@ -49,52 +289,88 @@
     #tabs {
       display: flex;
       align-items: center;
+
       gap: 5px;
+
       height: 100%;
+
       min-width: 0;
+
       flex: 1;
+
       overflow-x: auto;
       overflow-y: hidden;
     }
 
     .tab {
       height: 38px;
+
       min-width: 145px;
       max-width: 230px;
+
       display: flex;
       align-items: center;
+
       gap: 8px;
-      padding: 0 8px 0 12px;
+
+      padding:
+        0 8px 0 12px;
+
       border-radius: 10px;
-      background: #211c29;
+
+      background:
+        rgba(33, 28, 41, 0.9);
+
       color: #aaa2b5;
+
       cursor: pointer;
+
       user-select: none;
+
       flex-shrink: 0;
+
+      border:
+        1px solid transparent;
     }
 
     .tab.active {
-      background: #30263c;
+      background:
+        rgba(48, 38, 60, 0.95);
+
       color: white;
+
+      border-color:
+        rgba(140, 90, 190, 0.3);
     }
 
     .tab-title {
       flex: 1;
+
       min-width: 0;
+
       overflow: hidden;
+
       white-space: nowrap;
+
       text-overflow: ellipsis;
+
       font-size: 14px;
     }
 
     .tab-close {
       width: 26px;
       height: 26px;
+
       border: 0;
+
       border-radius: 6px;
+
       background: transparent;
+
       color: #aaa2b5;
+
       font-size: 18px;
+
       cursor: pointer;
     }
 
@@ -106,12 +382,20 @@
     #newTabButton {
       width: 38px;
       height: 38px;
+
       flex-shrink: 0;
+
       border: 0;
+
       border-radius: 9px;
-      background: #30263c;
+
+      background:
+        rgba(48, 38, 60, 0.95);
+
       color: white;
+
       font-size: 24px;
+
       cursor: pointer;
     }
 
@@ -119,28 +403,36 @@
       background: #4d3b60;
     }
 
-    /* Main area */
+    /* =========================
+       MAIN
+       ========================= */
 
     #main {
       position: relative;
+
+      z-index: 1;
+
       flex: 1;
+
       min-height: 0;
     }
 
-    /* Home screen */
+    /* =========================
+       HOME
+       ========================= */
 
     #shell {
       position: absolute;
+
       inset: 0;
+
       overflow-y: auto;
-      padding: 30px 18px;
+
+      padding:
+        30px 18px;
+
       background:
-        radial-gradient(
-          circle at top,
-          #241631 0%,
-          #0d0912 45%,
-          #09070d 100%
-        );
+        rgba(9, 7, 13, 0.28);
     }
 
     #shell.hidden {
@@ -149,54 +441,94 @@
 
     .home {
       max-width: 850px;
-      margin: 0 auto;
+
+      margin:
+        0 auto;
+
       text-align: center;
     }
 
     .logo {
       font-size: 42px;
+
       font-weight: 800;
+
       margin-top: 35px;
+
       margin-bottom: 5px;
+
+      text-shadow:
+        0 0 25px rgba(150,80,220,0.25);
     }
 
     .subtitle {
       color: #aaa0b5;
+
       margin-bottom: 28px;
     }
 
     .search-box {
       display: flex;
+
       gap: 8px;
+
       max-width: 700px;
-      margin: 0 auto 25px;
+
+      margin:
+        0 auto 25px;
     }
 
     #url {
       flex: 1;
+
       min-width: 0;
+
       height: 48px;
-      border: 1px solid #40364c;
+
+      border:
+        1px solid #40364c;
+
       border-radius: 12px;
+
       outline: none;
-      padding: 0 16px;
-      background: #17131d;
+
+      padding:
+        0 16px;
+
+      background:
+        rgba(23, 19, 29, 0.85);
+
+      backdrop-filter:
+        blur(10px);
+
       color: white;
+
       font-size: 16px;
     }
 
     #url:focus {
       border-color: #8b5fc7;
+
+      box-shadow:
+        0 0 20px rgba(130,70,190,0.12);
     }
 
     #proxyForm button {
       height: 48px;
-      padding: 0 20px;
+
+      padding:
+        0 20px;
+
       border: 0;
+
       border-radius: 12px;
+
       background: #7545a8;
+
       color: white;
+
       font-weight: bold;
+
       cursor: pointer;
     }
 
@@ -206,78 +538,140 @@
 
     #status {
       min-height: 20px;
+
       color: #aaa0b5;
+
       font-size: 13px;
+
       margin-bottom: 25px;
+
       overflow: hidden;
+
       text-overflow: ellipsis;
+
       white-space: nowrap;
     }
 
-    /* Side buttons */
+    /* =========================
+       BUTTONS
+       ========================= */
 
     .side-buttons {
       display: flex;
+
       justify-content: center;
+
       flex-wrap: wrap;
+
       gap: 10px;
+
       margin-bottom: 28px;
     }
 
     .side-button {
-      border: 1px solid #40364c;
-      background: #17131d;
+      border:
+        1px solid #40364c;
+
+      background:
+        rgba(23, 19, 29, 0.8);
+
+      backdrop-filter:
+        blur(10px);
+
       color: white;
-      padding: 12px 18px;
+
+      padding:
+        12px 18px;
+
       border-radius: 10px;
+
       cursor: pointer;
     }
 
     .side-button:hover {
-      background: #2a2034;
+      background:
+        rgba(42, 32, 52, 0.95);
     }
 
-    /* Games */
+    /* =========================
+       GAMES
+       ========================= */
 
     .section-title {
-      margin: 25px 0 14px;
+      margin:
+        25px 0 14px;
+
       font-size: 22px;
     }
 
     .games {
       display: grid;
+
       grid-template-columns:
-        repeat(auto-fit, minmax(150px, 1fr));
+        repeat(
+          auto-fit,
+          minmax(150px, 1fr)
+        );
+
       gap: 10px;
     }
 
     .game-card {
-      border: 1px solid #30283b;
-      background: #15121b;
+      border:
+        1px solid #30283b;
+
+      background:
+        rgba(21, 18, 27, 0.78);
+
+      backdrop-filter:
+        blur(10px);
+
       color: white;
+
       border-radius: 12px;
-      padding: 16px 10px;
+
+      padding:
+        16px 10px;
+
       cursor: pointer;
+
       font-size: 15px;
+
+      transition:
+        transform 0.2s ease,
+        background 0.2s ease;
     }
 
     .game-card:hover {
-      background: #251d30;
-      border-color: #61477c;
+      background:
+        rgba(37, 29, 48, 0.95);
+
+      border-color:
+        #61477c;
+
+      transform:
+        translateY(-2px);
     }
 
     .credit {
       margin-top: 35px;
+
       color: #716a78;
+
       font-size: 13px;
     }
 
-    /* Browser */
+    /* =========================
+       BROWSER
+       ========================= */
 
     #browser {
       position: absolute;
+
       inset: 0;
+
       display: none;
+
       background: #000;
     }
 
@@ -288,29 +682,49 @@
     .proxy-frame,
     .youtube-frame {
       position: absolute;
+
       inset: 0;
+
       width: 100%;
       height: 100%;
+
       border: 0;
+
       background: #000;
     }
 
-    /* Home button */
+    /* =========================
+       HOME BUTTON
+       ========================= */
 
     #homeButton {
       position: absolute;
+
       z-index: 100;
+
       left: 12px;
       top: 12px;
+
       width: 42px;
       height: 42px;
+
       border: 0;
+
       border-radius: 10px;
-      background: rgba(25, 20, 32, 0.92);
+
+      background:
+        rgba(25, 20, 32, 0.92);
+
       color: white;
+
       font-size: 20px;
+
       cursor: pointer;
+
       display: none;
+
+      backdrop-filter:
+        blur(10px);
     }
 
     #homeButton.visible {
@@ -321,7 +735,12 @@
       background: #49355b;
     }
 
+    /* =========================
+       MOBILE
+       ========================= */
+
     @media (max-width: 600px) {
+
       .logo {
         font-size: 34px;
       }
@@ -337,17 +756,66 @@
       .tab {
         min-width: 125px;
       }
+
+      .bubble2 {
+        width: 190px;
+        height: 190px;
+      }
+
+      .bubble4 {
+        width: 160px;
+        height: 160px;
+      }
     }
+
+    /* Reduce movement for people who
+       have reduced-motion enabled. */
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .bubble {
+        animation: none !important;
+      }
+
+      .game-card {
+        transition: none;
+      }
+    }
+
   </style>
 
   <script src="/scramjet/scramjet.js"></script>
   <script src="/controller/controller.api.js"></script>
   <script src="/utils/scramjet-utils.js"></script>
+
 </head>
 
 <body>
 
-  <!-- Browser tabs -->
+  <!-- =========================
+       MOVING BACKGROUND
+       ========================= -->
+
+  <div id="bubbleBackground">
+
+    <div class="bubble bubble1"></div>
+
+    <div class="bubble bubble2"></div>
+
+    <div class="bubble bubble3"></div>
+
+    <div class="bubble bubble4"></div>
+
+    <div class="bubble bubble5"></div>
+
+    <div class="bubble bubble6"></div>
+
+  </div>
+
+
+  <!-- =========================
+       TABS
+       ========================= -->
 
   <div id="tabBar">
 
@@ -363,9 +831,12 @@
 
   </div>
 
+
   <div id="main">
 
-    <!-- Home screen -->
+    <!-- =========================
+         HOME
+         ========================= -->
 
     <section id="shell">
 
@@ -379,10 +850,12 @@
           Forknut Proxy
         </div>
 
+
         <form
           id="proxyForm"
           class="search-box"
         >
+
           <input
             id="url"
             type="text"
@@ -395,11 +868,14 @@
           <button type="submit">
             Go
           </button>
+
         </form>
+
 
         <div id="status">
           Ready
         </div>
+
 
         <div class="side-buttons">
 
@@ -421,11 +897,17 @@
 
         </div>
 
+
+        <!-- =========================
+             GAMES
+             ========================= -->
+
         <div id="gamesSection">
 
           <div class="section-title">
             Games
           </div>
+
 
           <div class="games">
 
@@ -436,12 +918,14 @@
               Slope
             </button>
 
+
             <button
               class="game-card"
               data-game="https://play2048.co/"
             >
               2048
             </button>
+
 
             <button
               class="game-card"
@@ -450,12 +934,14 @@
               Cookie Clicker
             </button>
 
+
             <button
               class="game-card"
               data-game="https://tetris.com/play-tetris"
             >
               Tetris
             </button>
+
 
             <button
               class="game-card"
@@ -464,12 +950,14 @@
               Run 3
             </button>
 
+
             <button
               class="game-card"
               data-game="https://www.crazygames.com/game/geometry-dash"
             >
               Geometry Dash
             </button>
+
 
             <button
               class="game-card"
@@ -478,12 +966,14 @@
               Drift Hunters
             </button>
 
+
             <button
               class="game-card"
               data-game="https://motox3m.io/"
             >
               Moto X3M
             </button>
+
 
             <button
               class="game-card"
@@ -492,6 +982,7 @@
               Stickman Hook
             </button>
 
+
             <button
               class="game-card"
               data-game="https://snowrider3d.com/"
@@ -499,12 +990,14 @@
               Snow Rider 3D
             </button>
 
+
             <button
               class="game-card"
               data-game="https://www.crazygames.com/game/basketball-stars"
             >
               Basketball Stars
             </button>
+
 
             <button
               class="game-card"
@@ -517,6 +1010,7 @@
 
         </div>
 
+
         <div class="credit">
           Made by Archie Faulkner
         </div>
@@ -525,7 +1019,10 @@
 
     </section>
 
-    <!-- Proxy browser -->
+
+    <!-- =========================
+         PROXY BROWSER
+         ========================= -->
 
     <section id="browser">
 
@@ -540,6 +1037,7 @@
     </section>
 
   </div>
+
 
   <script src="/app.js"></script>
 
