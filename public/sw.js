@@ -1,5 +1,8 @@
 importScripts("/controller/controller.sw.js");
 
+// Forknut v6: force the browser to treat this worker as the current deployment.
+
+
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
