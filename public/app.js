@@ -52,7 +52,7 @@ function ensureDiagnosticPanel() {
 
   const title = document.createElement("div");
   title.style.cssText = "font-weight:700;margin-bottom:7px";
-  title.textContent = "Forknut Diagnostic v2";
+  title.textContent = "Forknut Diagnostic v3 â HTTP ERROR BODY";
 
   const controls = document.createElement("div");
   controls.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px";
@@ -170,10 +170,25 @@ async function probeImageUrl(url, frameUrl) {
     });
 
     let bytes = "?";
+    let errorBody = "";
     try {
       const clone = response.clone();
       const buffer = await clone.arrayBuffer();
       bytes = buffer.byteLength;
+    } catch {}
+
+    if (response.status >= 400) {
+      try {
+        const cloneText = response.clone();
+        errorBody = (await cloneText.text()).slice(0, 4000);
+      } catch (e) {
+        errorBody = "<could not read error body: " + String(e) + ">";
+      }
+    }
+
+    const headerDump = {};
+    try {
+      response.headers.forEach((value, key) => { headerDump[key] = value; });
     } catch {}
 
     diagnosticLog("IMG_PROBE", "browser fetch result", {
@@ -184,6 +199,8 @@ async function probeImageUrl(url, frameUrl) {
       contentType: response.headers.get("content-type") || "",
       contentLength: response.headers.get("content-length") || "",
       bytes,
+      errorBody,
+      headers: JSON.stringify(headerDump),
       elapsedMs: Math.round(performance.now() - started),
       frame: shortUrl(frameUrl || "")
     });
@@ -328,8 +345,10 @@ if ("serviceWorker" in navigator) {
       ok: data.ok ?? "",
       contentType: data.contentType || "",
       contentLength: data.contentLength || "",
+      responseType: data.responseType || "",
       bytes: data.bytes ?? "",
       elapsedMs: data.elapsedMs ?? "",
+      body: data.body || "",
       error: data.error || ""
     });
   });
