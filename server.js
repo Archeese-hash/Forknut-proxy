@@ -37,7 +37,6 @@ const libcurlPath = dirOf(
   "@mercuryworkshop/libcurl-transport"
 );
 
-
 const app = Fastify({
   logger: true,
 
@@ -57,6 +56,10 @@ const app = Fastify({
             ).pathname;
 
           if (pathname === "/wisp/") {
+            console.log(
+              "[Forknut] Wisp connection opened"
+            );
+
             req.url = "/wisp/";
 
             wisp.routeRequest(
@@ -68,10 +71,15 @@ const app = Fastify({
             return;
           }
 
+          console.log(
+            "[Forknut] Rejected WebSocket:",
+            pathname
+          );
+
           socket.end();
         } catch (error) {
           console.error(
-            "Wisp error:",
+            "[Forknut] Wisp error:",
             error
           );
 
@@ -84,14 +92,15 @@ const app = Fastify({
   }
 });
 
-
 /*
- * Scramjet requires these headers
- * for cross-origin isolation.
+ * Scramjet 2.x requires the shell to remain
+ * cross-origin isolated.
+ *
+ * Keep these headers.
  */
 app.addHook(
   "onSend",
-  async (_request, reply) => {
+  async (request, reply) => {
     reply.header(
       "Cross-Origin-Opener-Policy",
       "same-origin"
@@ -101,12 +110,34 @@ app.addHook(
       "Cross-Origin-Embedder-Policy",
       "require-corp"
     );
+
+    /*
+     * Prevent an old service worker from
+     * being stuck in the browser cache.
+     */
+    if (
+      request.url === "/sw.js"
+    ) {
+      reply.header(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate"
+      );
+
+      reply.header(
+        "Pragma",
+        "no-cache"
+      );
+
+      reply.header(
+        "Expires",
+        "0"
+      );
+    }
   }
 );
 
-
 /*
- * Scramjet engine
+ * Scramjet core
  */
 await app.register(
   fastifyStatic,
@@ -116,7 +147,6 @@ await app.register(
     decorateReply: false
   }
 );
-
 
 /*
  * Scramjet controller
@@ -130,7 +160,6 @@ await app.register(
   }
 );
 
-
 /*
  * Scramjet utilities
  */
@@ -143,12 +172,8 @@ await app.register(
   }
 );
 
-
 /*
  * Libcurl transport
- *
- * This is the important transport
- * used by Forknut.
  */
 await app.register(
   fastifyStatic,
@@ -158,7 +183,6 @@ await app.register(
     decorateReply: false
   }
 );
-
 
 /*
  * Forknut website
@@ -171,7 +195,6 @@ await app.register(
   }
 );
 
-
 /*
  * Health check
  */
@@ -182,22 +205,21 @@ app.get(
       ok: true,
       service: "Forknut Proxy",
       scramjet: "2.0.67-alpha.2",
-      transport: "libcurl"
+      controller: "0.0.14",
+      transport: "libcurl",
+      wisp: true
     };
   }
 );
-
 
 const port = Number(
   process.env.PORT || 3000
 );
 
-
 await app.listen({
   host: "0.0.0.0",
   port
 });
-
 
 console.log(
   `Forknut Proxy running on port ${port}`
