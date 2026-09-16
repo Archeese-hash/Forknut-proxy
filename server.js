@@ -191,9 +191,23 @@ app.get("/__forknut/image", async (request, reply) => {
     return reply.code(400).type("text/plain; charset=utf-8").send("Missing image URL.");
   }
 
+  // Accept either a normal image URL or a Scramjet-rewritten URL.
+  // Google Images can contain multiple encoded URL layers, so try several
+  // decoding passes before giving up.
   let target;
   try {
-    target = new URL(raw);
+    let candidate = String(raw);
+    for (let i = 0; i < 3; i++) {
+      const match = candidate.match(/((?:https?|ftp):\/\/[^?#\s]+)/i);
+      if (match) {
+        candidate = match[1];
+        break;
+      }
+      const decoded = decodeURIComponent(candidate);
+      if (decoded === candidate) break;
+      candidate = decoded;
+    }
+    target = new URL(candidate);
   } catch {
     return reply.code(400).type("text/plain; charset=utf-8").send("Invalid image URL.");
   }
@@ -205,12 +219,18 @@ app.get("/__forknut/image", async (request, reply) => {
     for (let redirects = 0; redirects <= 5; redirects++) {
       await assertSafeUpstream(current.href);
 
+      const host = current.hostname.toLowerCase();
+      const googleHost = host === "google.com" || host.endsWith(".google.com") ||
+        host === "gstatic.com" || host.endsWith(".gstatic.com") ||
+        host.endsWith("googleusercontent.com");
+
       const upstream = await fetch(current.href, {
         redirect: "manual",
         headers: {
           "user-agent": request.headers["user-agent"] || "Mozilla/5.0 (iPad; CPU OS 26_0 like Mac OS X) AppleWebKit/605.1.15 Version/26.0 Mobile/15E148 Safari/604.1",
           "accept": request.headers.accept || "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-          "referer": current.origin + "/"
+          "referer": googleHost ? "https://www.google.com/" : current.origin + "/",
+          "accept-language": request.headers["accept-language"] || "en-AU,en;q=0.9"
         }
       });
 
