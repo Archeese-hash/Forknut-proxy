@@ -295,9 +295,19 @@ function showYouTubePlayer(tab, videoId) {
 // image resource, retry the original URL through Forknut's server proxy.
 function extractOriginalUrl(scramjetUrl) {
   const value = String(scramjetUrl || "");
-  const marker = value.match(/(?:^|\/)((?:https?|ftp)%3A%2F%2F.+)$/i);
-  if (!marker) return "";
-  try { return decodeURIComponent(marker[1]); } catch { return ""; }
+
+  const encoded = value.match(/((?:https?|ftp)%3A%2F%2F[^?#\s]+)/i);
+  if (encoded) {
+    try { return decodeURIComponent(encoded[1]); } catch {}
+  }
+
+  try {
+    const decoded = decodeURIComponent(value);
+    const marker = decoded.match(/((?:https?|ftp):\/\/[^?#\s]+)/i);
+    return marker ? marker[1] : "";
+  } catch {
+    return "";
+  }
 }
 
 function fallbackImageThroughServer(img) {
