@@ -42,10 +42,13 @@ function looksLikeImage(response) {
 
 async function fallbackImage(request) {
   const original = extractOriginalUrl(request.url);
-  if (!original || !/^https?:\/\//i.test(original)) return null;
+  // If the Scramjet URL cannot be decoded client-side, let the server do the
+  // same extraction. This is important for Google Images URLs, which often
+  // contain several layers of encoding.
+  const target = original || request.url;
 
   const endpoint =
-    "/__forknut/image?url=" + encodeURIComponent(original);
+    "/__forknut/image?url=" + encodeURIComponent(target);
 
   try {
     const response = await fetch(endpoint, {
