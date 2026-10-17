@@ -1,19 +1,26 @@
 {
   "name": "forknut-proxy",
-  "version": "3.1.0",
+  "version": "3.3.0",
   "private": true,
   "type": "module",
   "description": "Forknut Proxy powered by Scramjet.",
-  "engines": {"node": ">=20"},
-  "scripts": {"start": "node server.js", "dev": "node server.js"},
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node --check server.js && node --check public/app.js && node --check public/sw.js",
+    "test": "node --test"
+  },
   "dependencies": {
-    "@fastify/static": "^9.0.0",
-    "fastify": "^5.7.4",
+    "@fastify/static": "9.0.0",
+    "fastify": "5.7.4",
     "@mercuryworkshop/scramjet": "2.0.67-alpha.2",
     "@mercuryworkshop/scramjet-controller": "0.0.14",
     "@mercuryworkshop/scramjet-utils": "0.0.3",
-    "@mercuryworkshop/libcurl-transport": "^2.0.5",
-    "@mercuryworkshop/epoxy-transport": "^3.0.1",
-    "@mercuryworkshop/wisp-js": "^0.4.1"
+    "@mercuryworkshop/libcurl-transport": "2.0.5",
+    "@mercuryworkshop/epoxy-transport": "3.0.1",
+    "@mercuryworkshop/wisp-js": "0.4.1"
   }
 }
