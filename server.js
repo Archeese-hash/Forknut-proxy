@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import http from "node:http";
+import https from "node:https";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -8,6 +9,7 @@ import { createRequire } from "node:module";
 
 import { scramjetPath } from "@mercuryworkshop/scramjet/path";
 import { server as wisp } from "@mercuryworkshop/wisp-js/server";
+import { isBlockedHostname, isPublicAddress } from "./lib/security.js";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -109,21 +111,47 @@ forknetTransportBody instanceof ArrayBuffer ? [forknetTransportBody] : [],
 
 await prepareWebKitController();
 
+const websocketCounts = new Map();
+const MAX_WISP_CONNECTIONS_PER_IP = 12;
+
 const app = Fastify({
-  logger: true,
+  logger: {
+    level: process.env.LOG_LEVEL || "info",
+    redact: { paths: ["req.url", "req.headers.cookie", "req.headers.authorization"], censor: "[REDACTED]" }
+  },
   serverFactory: (handler) => {
     const server = http.createServer(handler);
     server.on("upgrade", (req, socket, head) => {
       try {
         const pathname = new URL(req.url || "/", "http://localhost").pathname;
-        if (pathname === "/wisp/") {
-          wisp.routeRequest(req, socket, head);
+        const origin = req.headers.origin;
+        const host = req.headers.host;
+        const originUrl = origin ? new URL(origin) : null;
+        const secureOrigin = originUrl && originUrl.host === host && originUrl.protocol === "https:";
+        const localOrigin = originUrl && originUrl.host === host && originUrl.protocol === "http:" && /^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host || "");
+        if (pathname !== "/wisp/" || !(secureOrigin || localOrigin)) {
+          socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+          socket.destroy();
           return;
         }
-        socket.end();
+
+        const ip = req.socket.remoteAddress || "unknown";
+        const count = websocketCounts.get(ip) || 0;
+        if (count >= MAX_WISP_CONNECTIONS_PER_IP) {
+          socket.write("HTTP/1.1 429 Too Many Requests\r\nRetry-After: 30\r\nConnection: close\r\n\r\n");
+          socket.destroy();
+          return;
+        }
+        websocketCounts.set(ip, count + 1);
+        socket.once("close", () => {
+          const remaining = Math.max(0, (websocketCounts.get(ip) || 1) - 1);
+          if (remaining) websocketCounts.set(ip, remaining);
+          else websocketCounts.delete(ip);
+        });
+        wisp.routeRequest(req, socket, head);
       } catch (error) {
-        console.error("[Forknut] Wisp error:", error);
-        socket.end();
+        console.error("[Forknut] Wisp upgrade rejected:", error?.message || error);
+        socket.destroy();
       }
     });
     return server;
@@ -134,58 +162,97 @@ app.addHook("onSend", async (request, reply) => {
   reply.header("Cross-Origin-Opener-Policy", "same-origin");
   reply.header("Cross-Origin-Embedder-Policy", "credentialless");
   reply.header("Cross-Origin-Resource-Policy", "cross-origin");
+  if (["/sw.js", "/app.js", "/controller/controller.api.js"].includes(request.url)) {
+    reply.header("Cache-Control", "no-store, no-cache, must-revalidate");
+    reply.header("Pragma", "no-cache");
+    reply.header("Expires", "0");
+  }
 });
 
-function isBlockedHostname(hostname) {
-  const host = hostname.toLowerCase();
-  if (host === "localhost" || host.endsWith(".localhost")) return true;
-  if (host === "127.0.0.1" || host === "0.0.0.0" || host === "::1") return true;
-  if (host.endsWith(".local") || host.endsWith(".internal")) return true;
-  return false;
-}
 
-function isPrivateIPv4(hostname) {
-  const parts = hostname.split(".").map(Number);
-  if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return false;
-  const [a, b] = parts;
-  return (
-    a === 10 ||
-    a === 127 ||
-    a === 0 ||
-    (a === 169 && b === 254) ||
-    (a === 172 && b >= 16 && b <= 31) ||
-    (a === 192 && b === 168)
-  );
-}
+const imageRate = new Map();
+const IMAGE_RATE_WINDOW_MS = 60_000;
+const IMAGE_RATE_LIMIT = 90;
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+let activeImageRequests = 0;
+const MAX_ACTIVE_IMAGE_REQUESTS = 24;
 
-async function assertSafeUpstream(url) {
-  const parsed = new URL(url);
-  if (!/^https?:$/.test(parsed.protocol)) {
-    throw new Error("Only HTTP(S) image URLs are allowed.");
+function allowImageRequest(request) {
+  const key = request.ip || request.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  let entry = imageRate.get(key);
+  if (!entry || now - entry.started >= IMAGE_RATE_WINDOW_MS) {
+    entry = { started: now, count: 0 };
+    imageRate.set(key, entry);
   }
-  if (isBlockedHostname(parsed.hostname) || isPrivateIPv4(parsed.hostname)) {
-    throw new Error("Blocked private/local upstream address.");
-  }
-
-  try {
-    const dns = await import("node:dns/promises");
-    const addresses = await dns.lookup(parsed.hostname, { all: true });
-    for (const address of addresses) {
-      if (isPrivateIPv4(address.address)) {
-        throw new Error("Blocked upstream resolving to a private IPv4 address.");
-      }
-      const value = String(address.address).toLowerCase();
-      if (value === "::1" || value.startsWith("fc") || value.startsWith("fd") || value.startsWith("fe80:")) {
-        throw new Error("Blocked upstream resolving to a private IPv6 address.");
-      }
+  entry.count++;
+  // Bound memory if a public service receives many distinct source IPs.
+  if (imageRate.size > 5000) {
+    for (const [ip, value] of imageRate) {
+      if (now - value.started >= IMAGE_RATE_WINDOW_MS) imageRate.delete(ip);
     }
-  } catch (error) {
-    if (String(error?.message || "").startsWith("Blocked upstream")) throw error;
-    // DNS lookup failures are reported normally by the route below.
   }
+  return entry.count <= IMAGE_RATE_LIMIT;
 }
+
+async function resolveSafeUpstream(url) {
+  const parsed = new URL(url);
+  if (!/^https?:$/.test(parsed.protocol)) throw new Error("Only HTTP(S) image URLs are allowed.");
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
+  if (isBlockedHostname(hostname) || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) || hostname.includes(":")) throw new Error("Blocked private/local or IP-literal upstream host.");
+  const dns = await import("node:dns/promises");
+  const addresses = await dns.lookup(hostname, { all: true, verbatim: true });
+  if (!addresses.length || addresses.some(item => !isPublicAddress(item.address))) {
+    throw new Error("Blocked upstream hostname resolving to a non-public address.");
+  }
+  return addresses[0];
+}
+
+async function requestPinned(url, headers, maxBytes) {
+  const parsed = new URL(url);
+  const resolved = await resolveSafeUpstream(url);
+  const client = parsed.protocol === "https:" ? https : http;
+  return await new Promise((resolve, reject) => {
+    const req = client.request(parsed, {
+      method: "GET", headers, timeout: 15_000,
+      lookup: (_hostname, _options, callback) => callback(null, resolved.address, resolved.family)
+    }, async response => {
+      const status = response.statusCode || 502;
+      if (status >= 300 && status < 400 && response.headers.location) {
+        response.resume();
+        resolve({ status, headers: response.headers, body: Buffer.alloc(0) });
+        return;
+      }
+      const chunks = [];
+      let total = 0;
+      try {
+        for await (const chunk of response) {
+          total += chunk.length;
+          if (total > maxBytes) {
+            response.destroy();
+            throw new Error("Upstream response exceeds the size limit.");
+          }
+          chunks.push(Buffer.from(chunk));
+        }
+        resolve({ status, headers: response.headers, body: Buffer.concat(chunks, total) });
+      } catch (error) { reject(error); }
+    });
+    req.setTimeout(15_000, () => req.destroy(new Error("Upstream request timed out.")));
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 
 app.get("/__forknut/image", async (request, reply) => {
+  if (!allowImageRequest(request)) {
+    return reply.code(429).header("Retry-After", "60").type("text/plain; charset=utf-8").send("Image request rate limit reached. Try again shortly.");
+  }
+  if (activeImageRequests >= MAX_ACTIVE_IMAGE_REQUESTS) {
+    return reply.code(503).header("Retry-After", "5").type("text/plain; charset=utf-8").send("Image service is busy. Try again shortly.");
+  }
+  activeImageRequests++;
+  try {
   const raw = request.query?.url;
   if (!raw || typeof raw !== "string") {
     return reply.code(400).type("text/plain; charset=utf-8").send("Missing image URL.");
@@ -238,13 +305,10 @@ app.get("/__forknut/image", async (request, reply) => {
     return reply.code(400).type("text/plain; charset=utf-8").send("Invalid image URL.");
   }
 
-  const started = Date.now();
   let current = target;
 
   try {
     for (let redirects = 0; redirects <= 5; redirects++) {
-      await assertSafeUpstream(current.href);
-
       const host = current.hostname.toLowerCase();
       const isGoogleImageHost =
         host === "google.com" || host.endsWith(".google.com") ||
@@ -262,40 +326,30 @@ app.get("/__forknut/image", async (request, reply) => {
       if (isYouTubeImageHost) imageReferer = "https://www.youtube.com/";
       else if (isGoogleImageHost) imageReferer = "https://www.google.com/";
 
-      const upstream = await fetch(current.href, {
-        redirect: "manual",
-        headers: {
-          // A desktop browser UA is more consistently accepted by image CDNs
-          // than the iPad UA when the request originates from a server.
-          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-          "accept": request.headers.accept || "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-          "referer": imageReferer,
-          "accept-language": request.headers["accept-language"] || "en-US,en;q=0.9"
-        }
-      });
-      const location = upstream.headers.get("location");
+      const upstream = await requestPinned(current.href, {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "accept": request.headers.accept || "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "referer": imageReferer,
+        "accept-language": request.headers["accept-language"] || "en-US,en;q=0.9"
+      }, MAX_IMAGE_BYTES);
+      const location = upstream.headers.location;
       if (upstream.status >= 300 && upstream.status < 400 && location) {
         current = new URL(location, current.href);
         continue;
       }
-
-      const contentType = upstream.headers.get("content-type") || "application/octet-stream";
-      const contentLength = Number(upstream.headers.get("content-length") || 0);
-
-      if (!upstream.ok) {
-        const body = (await upstream.text()).slice(0, 1000);
-        console.error("[Forknut] Image upstream error:", upstream.status, current.href, body.slice(0, 500));
-        return reply.code(upstream.status).type("text/plain; charset=utf-8").send(`Upstream image error ${upstream.status}: ${body}`);
+      const contentType = String(upstream.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+      const contentLength = Number(upstream.headers["content-length"] || 0);
+      if (upstream.status < 200 || upstream.status >= 300) {
+        console.error("[Forknut] Image upstream returned:", upstream.status, current.hostname);
+        return reply.code(upstream.status).type("text/plain; charset=utf-8").send(`Upstream image request failed (${upstream.status}).`);
       }
-
-      if (contentLength > 12 * 1024 * 1024) {
-        return reply.code(413).type("text/plain; charset=utf-8").send("Image is larger than the 12 MB diagnostic proxy limit.");
+      if (!contentType.startsWith("image/")) {
+        return reply.code(415).type("text/plain; charset=utf-8").send("The upstream URL did not return an image.");
       }
-
-      const buffer = Buffer.from(await upstream.arrayBuffer());
-      if (buffer.length > 12 * 1024 * 1024) {
-        return reply.code(413).type("text/plain; charset=utf-8").send("Image is larger than the 12 MB diagnostic proxy limit.");
+      if (contentLength > MAX_IMAGE_BYTES || upstream.body.length > MAX_IMAGE_BYTES) {
+        return reply.code(413).type("text/plain; charset=utf-8").send("Image is larger than the 12 MB proxy limit.");
       }
+      const buffer = upstream.body;
 
       return reply
         .code(200)
@@ -307,8 +361,11 @@ app.get("/__forknut/image", async (request, reply) => {
 
     throw new Error("Too many upstream redirects.");
   } catch (error) {
-    console.error("[Forknut] Image proxy exception:", current.href, error);
+    console.error("[Forknut] Image proxy exception:", current?.href || "invalid-url", error);
     return reply.code(502).type("text/plain; charset=utf-8").send(`Image proxy exception: ${String(error?.message || error)}`);
+  }
+  } finally {
+    activeImageRequests = Math.max(0, activeImageRequests - 1);
   }
 });
 
@@ -342,6 +399,9 @@ function cleanYoutubeId(value) {
 }
 
 app.get("/__forknut/youtube-thumb/:id", async (request, reply) => {
+  if (!allowImageRequest(request)) {
+    return reply.code(429).header("Retry-After", "60").type("text/plain; charset=utf-8").send("Image request rate limit reached. Try again shortly.");
+  }
   const id = String(request.params?.id || "");
   if (!/^[A-Za-z0-9_-]{6,20}$/.test(id)) {
     return reply.code(400).type("text/plain; charset=utf-8").send("Invalid YouTube video id.");
@@ -355,21 +415,22 @@ app.get("/__forknut/youtube-thumb/:id", async (request, reply) => {
 
   for (const target of variants) {
     try {
-      await assertSafeUpstream(target);
-      const upstream = await fetch(target, {
-        headers: {
-          "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-          "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-          "referer": "https://www.youtube.com/",
-          "accept-language": "en-US,en;q=0.9"
-        }
-      });
-      if (!upstream.ok) continue;
-      const buffer = Buffer.from(await upstream.arrayBuffer());
+      const upstream = await requestPinned(target, {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        "accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "referer": "https://www.youtube.com/",
+        "accept-language": "en-US,en;q=0.9"
+      }, 5 * 1024 * 1024);
+      if (upstream.status < 200 || upstream.status >= 300) continue;
+      const contentType = String(upstream.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+      if (!contentType.startsWith("image/")) continue;
+      const length = Number(upstream.headers["content-length"] || 0);
+      if (length > 5 * 1024 * 1024 || upstream.body.length > 5 * 1024 * 1024) continue;
+      const buffer = upstream.body;
       if (!buffer.length) continue;
       return reply
         .code(200)
-        .type(upstream.headers.get("content-type") || "image/jpeg")
+        .type(contentType || "image/jpeg")
         .header("Cache-Control", "public, max-age=3600")
         .header("Cross-Origin-Resource-Policy", "cross-origin")
         .send(buffer);
@@ -389,20 +450,12 @@ app.get("/health", async () => ({
   transport: "epoxy",
   wisp: true,
   coep: "credentialless",
-  diagnostic: false
+  diagnostic: true,
+  imageProxy: { rateLimitPerMinute: IMAGE_RATE_LIMIT, maxBytes: MAX_IMAGE_BYTES, maxConcurrent: MAX_ACTIVE_IMAGE_REQUESTS, dnsPinned: true },
+  wisp: { maxConnectionsPerIp: MAX_WISP_CONNECTIONS_PER_IP, originChecked: true }
 }));
 
-app.addHook("onSend", async (request, reply) => {
-  reply.header("Cross-Origin-Opener-Policy", "same-origin");
-  reply.header("Cross-Origin-Embedder-Policy", "credentialless");
-  reply.header("Cross-Origin-Resource-Policy", "cross-origin");
 
-  if (["/sw.js", "/app.js", "/controller/controller.api.js"].includes(request.url)) {
-    reply.header("Cache-Control", "no-store, no-cache, must-revalidate");
-    reply.header("Pragma", "no-cache");
-    reply.header("Expires", "0");
-  }
-});
 
 await app.register(fastifyStatic, {
   root: scramjetPath,
